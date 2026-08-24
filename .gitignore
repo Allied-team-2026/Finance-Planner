@@ -223,3 +223,6 @@ data/*.csv
 !data/sample_*.csv
 data/*.parquet
 scratch/
+
+# macOS
+.DS_Store
