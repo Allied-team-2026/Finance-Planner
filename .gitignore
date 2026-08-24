@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- project specific ---
+# Generated synthetic data: only small samples belong in the repo
+data/*.csv
+!data/sample_*.csv
+data/*.parquet
+scratch/
