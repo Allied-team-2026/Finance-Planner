@@ -1,0 +1,11 @@
+{
+  "_mock_note": "Hand-written mock for contract section 9. The Verifier is plain Python, not an LLM - an LLM checking an LLM can hallucinate agreement, which is worse than no check because we would trust it. tools/verify_mocks.py already contains a working reference implementation of this logic. status is 'pass', 'pass_after_retry' or 'fail'. suitability_flags are separate from unverified_numbers: a flag means the number is real but the plan is unsuitable, which is the Verifier doing risk work rather than arithmetic work.",
+
+  "status": "pass",
+  "numbers_checked": 34,
+  "unverified_numbers": [],
+  "suitability_flags": [
+    "Plan C equity allocation 0.85 exceeds revealed risk level 'moderate'"
+  ],
+  "retry_count": 0
+}
