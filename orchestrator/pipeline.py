@@ -183,13 +183,18 @@ def build_response(customer, profile, risk, plans, montecarlo, stress,
 
 # ------------------------------------------------------------- the pipeline
 
-def make_plan(customer_id, extra_monthly_savings=0):
-    """The whole thing, in the order it actually runs.
+def run_engines(customer_id, extra_monthly_savings=0):
+    """Every engine stage in dependency order, plus the §7 bundle they feed.
 
-    A what-if is the same pipeline with more surplus to work with, so it is this
-    function with one argument set rather than a second parallel path. Applying
-    it to the surplus here - not inside the plan generator - means §4's signature
-    never has to know what-ifs exist.
+    The wiring lives here and nowhere else. Which stage takes which arguments is
+    exactly the thing that breaks when a mock is swapped for a real engine, so
+    anything that wants to run the pipeline - production paths and tests alike -
+    calls this rather than repeating the order. A test that wires the pipeline
+    itself can pass against wiring production does not use.
+
+    A what-if is the same pipeline with more surplus to work with. Applying it to
+    the surplus here - not inside the plan generator - means §4's signature never
+    has to know what-ifs exist.
     """
     customer = run("customer", customer_id)
     profile = run("profile", customer)
@@ -204,25 +209,37 @@ def make_plan(customer_id, extra_monthly_savings=0):
     stress = run("stress", plans, profile)
     cohort = run("cohort", customer, profile)
 
-    bundle = build_bundle(customer, profile, features, risk,
-                          plans, montecarlo, stress)
+    return {
+        "customer": customer, "profile": profile, "features": features,
+        "risk": risk, "plans": plans, "montecarlo": montecarlo,
+        "stress": stress, "cohort": cohort,
+        "bundle": build_bundle(customer, profile, features, risk,
+                               plans, montecarlo, stress),
+    }
 
-    explanation = run("explanation", bundle)
-    verifier = run("verify", explanation, bundle)
 
-    return build_response(customer, profile, risk, plans, montecarlo,
-                          stress, explanation, cohort, verifier)
+def run_stages(customer_id, extra_monthly_savings=0):
+    """run_engines plus the agent stages, which read only the bundle.
+
+    Split from run_engines because the challenge path needs the bundle and must
+    not pay for an explanation and a verification it will not use - two LLM calls
+    on a live demo.
+    """
+    s = run_engines(customer_id, extra_monthly_savings)
+    s["explanation"] = run("explanation", s["bundle"])
+    s["verify"] = run("verify", s["explanation"], s["bundle"])
+    return s
+
+
+def make_plan(customer_id, extra_monthly_savings=0):
+    """The whole thing. Returns what the API serves and the UI renders."""
+    s = run_stages(customer_id, extra_monthly_savings)
+    return build_response(s["customer"], s["profile"], s["risk"], s["plans"],
+                          s["montecarlo"], s["stress"], s["explanation"],
+                          s["cohort"], s["verify"])
 
 
 def make_challenge(customer_id, chosen_plan_id):
     """Runs only after the customer picks a plan."""
-    customer = run("customer", customer_id)
-    profile = run("profile", customer)
-    features = run("features", customer)
-    risk = run("risk", features)
-    plans = run("plans", profile, risk)
-    montecarlo = run("montecarlo", plans)
-    stress = run("stress", plans, profile)
-    bundle = build_bundle(customer, profile, features, risk,
-                          plans, montecarlo, stress)
+    bundle = run_engines(customer_id)["bundle"]
     return run("challenge", bundle, chosen_plan_id)

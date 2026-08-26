@@ -37,7 +37,7 @@
       "surplus_after_investment": -7000,
       "allocation": { "equity": 0.85, "debt": 0.15 },
       "expected_annual_return": 0.13,
-      "projected_corpus": 2910000,
+      "projected_corpus": 4410000,
       "goal_amount": 2500000,
       "years": 5,
       "shortfall": 7000,

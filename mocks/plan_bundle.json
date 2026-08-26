@@ -108,17 +108,17 @@
       "monthly_investment": 52000,
       "surplus_after_investment": -7000,
       "allocation": { "equity": 0.85, "debt": 0.15 },
-      "projected_corpus": 2910000,
+      "projected_corpus": 4410000,
       "goal_amount": 2500000,
       "years": 5,
       "feasible": false,
       "shortfall": 7000,
-      "success_probability": 0.64,
-      "successful_simulations": 6400,
-      "median_corpus": 2870000,
-      "p10_corpus": 1620000,
-      "p90_corpus": 4340000,
-      "p10_gap_to_goal": 880000,
+      "success_probability": 0.95,
+      "successful_simulations": 9500,
+      "median_corpus": 4690000,
+      "p10_corpus": 2920000,
+      "p90_corpus": 6720000,
+      "p10_gap_to_goal": 0,
       "survives_stress": false,
       "breaking_combo": [
         {
@@ -148,7 +148,7 @@
 
   "comparisons": {
     "cheapest_plan_id": "B",
-    "highest_success_plan_id": "A",
+    "highest_success_plan_id": "C",
     "plan_count": 3,
     "monthly_investment_delta_vs_cheapest": { "A": 5000, "B": 0, "C": 22000 }
   },
