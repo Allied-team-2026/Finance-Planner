@@ -135,11 +135,13 @@
         {
           "event_id": "appraisal_miss",
           "label": "Appraisal comes in at 4% instead of 10%",
+          "annual_probability": 0.23,
           "cash_impact": -180000
         },
         {
           "event_id": "medical_expense",
           "label": "Family medical expense",
+          "annual_probability": 0.1,
           "cash_impact": -200000
         }
       ],
@@ -181,16 +183,19 @@
         {
           "event_id": "appraisal_miss",
           "label": "Appraisal comes in at 4% instead of 10%",
+          "annual_probability": 0.23,
           "cash_impact": -180000
         },
         {
           "event_id": "medical_expense",
           "label": "Family medical expense",
+          "annual_probability": 0.1,
           "cash_impact": -200000
         },
         {
           "event_id": "rent_hike",
           "label": "Landlord raises rent by 15%",
+          "annual_probability": 0.3,
           "cash_impact": -120000
         }
       ],
@@ -221,6 +226,7 @@
     "matched_on": ["age_band", "income_band", "goal_type", "stated_risk"],
     "age_band": "26-30",
     "income_band": "100000-150000",
+    "goal_type": "house_downpayment",
     "median_monthly_surplus": 38000,
     "median_savings_rate": 0.32,
     "customer_savings_rate": 0.375,
