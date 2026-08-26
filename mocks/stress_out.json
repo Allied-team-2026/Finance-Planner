@@ -1,0 +1,62 @@
+{
+  "_mock_note": "Hand-written mock for contract section 6. NOTE THE FIELD NAME: this module outputs 'survives'. Section 7 and the API response use 'survives_stress'. The orchestrator renames it once, same as the stated/revealed rename - intentional, do not change either end. breaking_probability is the product of the individual event probabilities, which treats events as independent. That is a simplification and we state it openly rather than hiding it; a medical expense and a rent hike are not truly independent.",
+
+  "results": [
+    {
+      "plan_id": "A",
+      "survives": true,
+      "breaking_combo": null,
+      "breaking_probability": null,
+      "shortfall_if_hit": null,
+      "combos_tested": 165
+    },
+    {
+      "plan_id": "B",
+      "survives": false,
+      "breaking_combo": [
+        {
+          "event_id": "appraisal_miss",
+          "label": "Appraisal comes in at 4% instead of 10%",
+          "annual_probability": 0.23,
+          "cash_impact": -180000
+        },
+        {
+          "event_id": "medical_expense",
+          "label": "Family medical expense",
+          "annual_probability": 0.10,
+          "cash_impact": -200000
+        }
+      ],
+      "breaking_probability": 0.023,
+      "shortfall_if_hit": 420000,
+      "combos_tested": 165
+    },
+    {
+      "plan_id": "C",
+      "survives": false,
+      "breaking_combo": [
+        {
+          "event_id": "appraisal_miss",
+          "label": "Appraisal comes in at 4% instead of 10%",
+          "annual_probability": 0.23,
+          "cash_impact": -180000
+        },
+        {
+          "event_id": "medical_expense",
+          "label": "Family medical expense",
+          "annual_probability": 0.10,
+          "cash_impact": -200000
+        },
+        {
+          "event_id": "rent_hike",
+          "label": "Landlord raises rent by 15%",
+          "annual_probability": 0.30,
+          "cash_impact": -120000
+        }
+      ],
+      "breaking_probability": 0.007,
+      "shortfall_if_hit": 690000,
+      "combos_tested": 165
+    }
+  ]
+}

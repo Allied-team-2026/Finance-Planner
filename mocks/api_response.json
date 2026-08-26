@@ -101,7 +101,7 @@
       "shortfall_if_hit": null,
       "exceeds_risk_ceiling": false,
       "headline": "Invest 35,000 a month, weighted towards debt",
-      "body": "This plan puts 40% of your monthly investment into equity and 60% into debt, and reaches a projected 26,20,000 against your 25,00,000 target in five years. It asks for 35,000 of your 45,000 monthly surplus, which leaves you 10,000 of breathing room each month. Out of 10,000 simulations run on twenty years of historical market returns, 8,700 reached your goal, and the plan also held up against every combination of shock events we tested.",
+      "body": "This plan puts 40% of your monthly investment into equity and 60% into debt, and reaches a projected 26,20,000 against your 25,00,000 target in five years. It asks for 35,000 of your 45,000 monthly surplus, which leaves you 10,000 of breathing room each month. Out of 10,000 simulations run on real historical market returns, 8,700 reached your goal, and the plan also held up against every combination of shock events we tested.",
       "pros": [
         "Highest chance of reaching your goal of the three options",
         "The only plan that survives our stress test",
@@ -243,7 +243,7 @@
   },
 
   "meta": {
-    "returns_data_source": "nifty_yearly_returns.csv",
+    "returns_data_source": "nifty_yearly_2005_2025.csv",
     "n_simulations": 10000,
     "assumptions_version": "assump-v1",
     "model_version": "rr-v1"

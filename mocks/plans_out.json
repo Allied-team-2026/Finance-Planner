@@ -1,0 +1,50 @@
+{
+  "_mock_note": "Hand-written mock for contract section 4. Contains ONLY plan-generator fields - no simulation results, no stress results, no prose. Those are joined in later by the orchestrator. Allocation ceiling for this customer is the more conservative of risk_capacity (moderate) and risk.revealed (moderate), so moderate, which caps equity at 0.65. Plan C sits above that on purpose so the Verifier flags it and the Challenger can argue against it - that is the demo, not a bug.",
+
+  "plans": [
+    {
+      "plan_id": "A",
+      "label": "Steady",
+      "monthly_investment": 35000,
+      "surplus_after_investment": 10000,
+      "allocation": { "equity": 0.4, "debt": 0.6 },
+      "expected_annual_return": 0.09,
+      "projected_corpus": 2620000,
+      "goal_amount": 2500000,
+      "years": 5,
+      "shortfall": 0,
+      "feasible": true,
+      "exceeds_risk_ceiling": false
+    },
+    {
+      "plan_id": "B",
+      "label": "Balanced",
+      "monthly_investment": 30000,
+      "surplus_after_investment": 15000,
+      "allocation": { "equity": 0.65, "debt": 0.35 },
+      "expected_annual_return": 0.11,
+      "projected_corpus": 2540000,
+      "goal_amount": 2500000,
+      "years": 5,
+      "shortfall": 0,
+      "feasible": true,
+      "exceeds_risk_ceiling": false
+    },
+    {
+      "plan_id": "C",
+      "label": "Growth",
+      "monthly_investment": 52000,
+      "surplus_after_investment": -7000,
+      "allocation": { "equity": 0.85, "debt": 0.15 },
+      "expected_annual_return": 0.13,
+      "projected_corpus": 2910000,
+      "goal_amount": 2500000,
+      "years": 5,
+      "shortfall": 7000,
+      "feasible": false,
+      "exceeds_risk_ceiling": true
+    }
+  ],
+
+  "assumptions_version": "assump-v1"
+}
