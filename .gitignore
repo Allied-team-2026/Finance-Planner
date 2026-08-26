@@ -220,6 +220,8 @@ __marimo__/
 # --- project specific ---
 # Generated synthetic data: only small samples belong in the repo
 data/*.csv
+# The shared historical returns file is the one CSV everyone needs identically
+!data/nifty_yearly_2005_2025.csv
 !data/sample_*.csv
 data/*.parquet
 scratch/
