@@ -1,11 +1,43 @@
 # JSON Data Contract — Finance Planning (Cognizant Hackathon)
 
-**Version 1.1 · Amended 26 Aug 2026 · Owner: Shlok**
-*(v1.0 frozen 24 Aug 2026)*
+**Version 1.2 · Amended 26 Aug 2026 · Owner: Shlok**
+*(v1.1 amended 26 Aug 2026 · v1.0 frozen 24 Aug 2026)*
 
 This document defines exactly what every module takes in and gives out. Once frozen, **nobody waits for anybody** — build against the mock data and it will fit on integration day.
 
 > **Rule:** If you need to change a field, message the group first. Do not change it silently. A renamed field on Day 4 costs the whole team hours.
+
+---
+
+## What changed in v1.2 — all of it found by building, not by reading
+
+**No section numbers moved, and nothing was renamed or removed.** v1.2 only fills gaps that only appeared once the mocks and the orchestrator existed. If you already built against v1.1, nothing you wrote is wrong — but three of these are fields your module has to produce.
+
+**Fields the examples were missing**
+
+1. **§1 was missing `name` and `goals`.** Both are required. `name` is what §11 returns as `customer_name`, and `goals` is the input to §4, §5 and §7 — without it there is nothing to plan for. The mock `mocks/customer_C001.json` has always had both; the contract example did not.
+2. **§6's `breaking_combo` shocks carry `annual_probability`,** copied straight from `shocks.json`. Without it the UI can show *what* breaks a plan but not *how likely* each shock is, and §11's `breaking_probability` becomes a number nobody can check.
+3. **§6 returns `combos_tested`.** "165 combinations tested" is worth a line on screen for one integer.
+4. **§7's risk block carries `panic_sell_count`,** taken from §3a's features. The Challenger needs to say "you sold during a drop on two occasions" and it is not allowed to count.
+5. **§7's `comparisons` carries `plan_count`.**
+6. **§16 echoes `goal_type`** alongside `age_band` and `income_band`, so the screen can name the goal the cohort was matched on.
+
+**Corrections**
+
+7. **§6's example `breaking_probability` was `0.11` for a two-event combination,** which contradicts the rule stated ten lines below it — the product of `0.23` and `0.10` is `0.023`. Now consistent, and the shock probabilities are visible in the example so the arithmetic can be checked.
+8. **§13 still named the returns file `nifty_yearly_returns.csv`** while §5 named it `nifty_yearly_2005_2025.csv`. The pinned name is **`nifty_yearly_2005_2025.csv`**. Everyone must use the identical file, or the same plan produces different success probabilities on different laptops and the demo contradicts itself.
+9. **`generated_at` in §11 is a date (`"2026-08-26"`), not a timestamp.** The committed mock has always been a date; the sketch was ambiguous.
+
+**§9 got materially stricter — read this if you own the Verifier**
+
+10. **Two normalisation rules were missing and both cause failures rather than false passes.** Indian digit grouping: `"26,20,000"` is `2620000`, and a regex written for western commas reads it as `2620` and then flags every money figure in the prose as invented. Percentages: `"40%"` may legitimately match a stored `0.4` *or* a stored `40`, so offer both readings and pass if either is in the whitelist.
+11. **The whitelist must include numbers found inside engine-written strings,** not just numeric fields. The Challenger quotes `evidence` verbatim, and those sentences contain digits — "within 3 days of a 9% market drop (Mar 2024)". Build the whitelist from strings too or the agent gets failed for quoting us correctly.
+12. **New check 5: a forbidden-phrase check on words, not digits.** This closes the one hole the other four cannot. See §9.
+
+**New in §12**
+
+13. **`GET /api/status`** reports which stages are real engines and which are still mocks.
+14. **How `/api/whatif` is implemented is now stated:** the orchestrator adds `extra_monthly_savings` to `profile.monthly_surplus` and re-runs the same pipeline. §4's signature does not change and does not need to know what-ifs exist.
 
 ---
 
@@ -106,6 +138,7 @@ Transactions must span **at least 24 months** so there is real "past trend data"
 ```json
 {
   "customer_id": "C001",
+  "name": "Rahul Mehta",
   "age": 28,
   "dependents": 1,
   "employment_type": "salaried",
@@ -119,6 +152,9 @@ Transactions must span **at least 24 months** so there is real "past trend data"
   },
   "liabilities": [
     { "type": "car_loan", "outstanding": 200000, "emi": 8000 }
+  ],
+  "goals": [
+    { "name": "house_downpayment", "target_amount": 2500000, "years": 5, "priority": 1 }
   ],
   "transactions": [
     { "date": "2026-07-05", "category": "rent",      "amount": 25000 },
@@ -151,6 +187,7 @@ These are the "contextuality" requirement. They are cheap to generate and they a
 ### Critical notes
 
 - `ground_truth_risk` is **for ML training and evaluation only**. It must **never** enter the planning pipeline or reach the frontend. Treat it as a hidden answer key.
+- `name` and `goals` are required (**stated explicitly in v1.2** — the v1.1 example omitted both). `name` never reaches an agent: §7 strips it and §11 puts it back. `goals` is the input every later section plans against.
 - Generate behaviour with **noise and confounders** — do not derive `ground_truth_risk` from a single clean rule, or the ML model just relearns your rule and the whole differentiator collapses under questioning.
 - `category` values (fixed list): `rent`, `groceries`, `utilities`, `transport`, `dining`, `shopping`, `health`, `education`, `entertainment`, `emi`, `insurance`, `misc`.
 - **The C001 numbers above must stay internally consistent** (corrected in v1.1): savings 30000 with a 75000 monthly expense gives `emergency_fund_months = 0.4`; equity 400000 of 800000 total assets gives `equity_allocation_pct = 0.5`; assets 800000 minus liabilities 200000 gives `net_worth = 600000`. §2, §3 and §11 all quote these. If you change one, change all of them.
@@ -379,17 +416,19 @@ Every one of these three is a line of arithmetic, and every one of them makes a 
       "survives": true,
       "breaking_combo": null,
       "breaking_probability": null,
-      "shortfall_if_hit": null
+      "shortfall_if_hit": null,
+      "combos_tested": 165
     },
     {
-      "plan_id": "C",
+      "plan_id": "B",
       "survives": false,
       "breaking_combo": [
-        { "event_id": "appraisal_miss",   "label": "Appraisal comes in at 4% instead of 10%", "cash_impact": -180000 },
-        { "event_id": "medical_expense",  "label": "Family medical expense",                  "cash_impact": -200000 }
+        { "event_id": "appraisal_miss",  "label": "Appraisal comes in at 4% instead of 10%", "annual_probability": 0.23, "cash_impact": -180000 },
+        { "event_id": "medical_expense", "label": "Family medical expense",                  "annual_probability": 0.10, "cash_impact": -200000 }
       ],
-      "breaking_probability": 0.11,
-      "shortfall_if_hit": 420000
+      "breaking_probability": 0.023,
+      "shortfall_if_hit": 420000,
+      "combos_tested": 165
     }
   ]
 }
@@ -405,7 +444,10 @@ Every one of these three is a line of arithmetic, and every one of them makes a 
 ```
 
 - ~10 events. Brute-force all 2- and 3-event combinations (~165) and report the **cheapest combination that makes the plan fail**.
-- `breaking_probability` = product of the individual event probabilities (state this assumption openly — events are treated as independent, which is a simplification).
+- `breaking_probability` = product of the individual event probabilities (state this assumption openly — events are treated as independent, which is a simplification). In the example above that is `0.23 × 0.10 = 0.023`. **v1.2 fixed this example** — it previously read `0.11`, which contradicted this very rule, and the shock probabilities were not shown so nobody could catch it.
+- **Copy each shock straight out of `shocks.json`, `annual_probability` included** (**v1.2**). The UI shows how likely each individual shock is, and the Verifier needs those digits in its whitelist — otherwise the agent gets failed for quoting a probability we gave it.
+- `combos_tested` (**new in v1.2**) is how many combinations you actually evaluated. One integer, and "165 combinations tested" is a good line on screen.
+- **Naming seam, do not fix it:** this module outputs `survives`. §7 and §11 both use `survives_stress`. The orchestrator renames it exactly once, in `merge_plans`. This is the same kind of deliberate seam as §3's `revealed_risk` → `risk.revealed`. Renaming it at either end breaks the other end.
 
 ---
 
@@ -424,6 +466,7 @@ Every one of these three is a line of arithmetic, and every one of them makes a 
   "profile": {
     "net_worth": 600000,
     "monthly_income": 120000,
+    "monthly_expense": 75000,
     "monthly_surplus": 45000,
     "emergency_fund_months": 0.4,
     "risk_capacity": "moderate",
@@ -437,6 +480,7 @@ Every one of these three is a line of arithmetic, and every one of them makes a 
     "revealed": "moderate",
     "confidence": 0.82,
     "mismatch": true,
+    "panic_sell_count": 2,
     "evidence": ["Exited equity MF within 3 days of a 9% market drop (Mar 2024)"]
   },
   "goals": [
@@ -470,6 +514,7 @@ Every one of these three is a line of arithmetic, and every one of them makes a 
   "comparisons": {
     "cheapest_plan_id": "B",
     "highest_success_plan_id": "A",
+    "plan_count": 3,
     "monthly_investment_delta_vs_cheapest": { "A": 5000, "B": 0, "C": 22000 }
   },
   "n_simulations": 10000
@@ -477,6 +522,16 @@ Every one of these three is a line of arithmetic, and every one of them makes a 
 ```
 
 The Orchestrator merges Plan Generator + Monte Carlo + Stress Test per `plan_id` into one flat plan object, so agents never have to join data themselves.
+
+### What the Orchestrator does to build this — new in v1.2
+
+Three transformations, all in `orchestrator/pipeline.py`, none of them arithmetic on engine output:
+
+- **Renames two fields, once each.** §3's `stated_risk` / `revealed_risk` become `risk.stated` / `risk.revealed`, and §6's `survives` becomes `survives_stress`. Both seams are deliberate. Neither engine changes.
+- **Drops what the agents do not need.** `expected_annual_return` (§4) and `combos_tested` (§6) are in §11 but not here. `profile` is trimmed to seven fields and `risk` to six. Less in the payload means less for an agent to misread.
+- **Adds `panic_sell_count`** from §3a's features, and computes `comparisons`. These are the only two numbers in this payload the orchestrator produces rather than passes through, and both exist because an agent would otherwise have to count or subtract.
+
+`panic_sell_count` is here so the Challenger can say "you sold during a drop on two occasions" without counting the `evidence` array itself. **Counting is arithmetic.** The rule below has no exception for small numbers.
 
 ### What is in this payload and what is not
 
@@ -545,12 +600,42 @@ If you are writing agent prompts and you find yourself wanting a number that is 
 
 1. Every value in `numbers_used` must be findable in `plan_bundle`.
 2. **Also** regex-sweep the prose for numbers as a backup, in case the agent under-declared.
-3. **Normalise before comparing** — `"₹35,000"`, `"35000"`, `"35,000"`, `"₹35k"` are the same number. Skipping this causes false failures.
-4. Suitability: flag if a recommended allocation is more aggressive than the **lower of `risk.revealed` and `risk_capacity`** permits. Both, not just one — a plan can be wrong because the customer will not hold it, or wrong because they cannot afford to lose it, and those are separate failures.
+3. **Normalise before comparing** — `"₹35,000"`, `"35000"`, `"35,000"`, `"₹35k"` are the same number. Skipping this causes false failures. Two more rules, **added in v1.2, both of which cause false failures rather than false passes**:
+   - **Indian digit grouping.** `"26,20,000"` is `2620000`. A regex written for western commas reads it as `2620`, fails to find it, and then reports every money figure in the prose as invented. Strip commas before parsing; do not assume groups of three.
+   - **Percentages read two ways.** `"40%"` may legitimately be a stored `0.4` or a stored `40` — allocations are fractions, percentiles are not. Offer both candidates and pass if either is in the whitelist.
+4. **Build the whitelist from engine-written strings too, not only numeric fields** (**v1.2**). The Challenger quotes `evidence` verbatim, and that prose contains digits: "Exited equity MF within 3 days of a 9% market drop (Mar 2024)" contributes `3`, `9` and `2024`. Miss this and the agent gets failed for quoting us accurately, which is the most demoralising possible false positive.
+5. **Check 5 — forbidden phrases, matched on words rather than digits** (**new in v1.2, and the most important addition to this section**). See below.
+6. Suitability: flag if a recommended allocation is more aggressive than the **lower of `risk.revealed` and `risk_capacity`** permits. Both, not just one — a plan can be wrong because the customer will not hold it, or wrong because they cannot afford to lose it, and those are separate failures.
+
+### Check 5, and why the first four are not enough ⭐
+
+A whitelist confirms a number **exists** in engine output. It cannot confirm the number **means** what the sentence claims. That gap is real and it was found by planting deliberate errors, not by reasoning about the design.
+
+The sentence that proves it:
+
+> "There is a 71% chance you abandon this plan within seven weeks."
+
+That passes every numeric check, because `0.71` genuinely is plan B's `success_probability`. A real number has been bolted onto a quantity nothing in this pipeline measures. **No amount of whitelist strictness catches it** — the number is not invented, the meaning is.
+
+It is catchable for one specific reason: we cut the ML adherence model, so **nothing anywhere in this system predicts human behaviour.** Every engine measures money or market outcomes. So any probability attached to a person's future *action* is invented by construction, and can be rejected on its wording without knowing anything about the numbers.
+
+Reject prose matching any of these:
+
+| Pattern | Why |
+|---|---|
+| "chance / probability / odds / likelihood … you" | a probability about the customer's own behaviour |
+| "you will abandon / quit / give up / stop investing / panic" | a prediction about what the customer will do |
+| a percentage in the same sentence as a behaviour verb | the disguised version of the two above |
+| "guarantee", "guaranteed" | a guarantee about an uncertain outcome |
+| "will definitely", "is certain to", "cannot fail" | certainty we do not have |
+| "recommend buying", "you should sell" | a specific product instruction, which is regulated advice |
+
+**Known remaining hole, stated honestly because a judge may find it:** numbers written as words — "twenty years", "two occasions", "five years" — escape a digit regex entirely. They are covered only by check 1, the agent declaring them in `numbers_used`. That hole is exactly what let the phrase "twenty years of historical market returns" sit in a committed mock unnoticed, describing a dataset length no field states. If you have spare time, a word-to-digit pass for zero through twenty and the round hundreds/thousands closes most of it.
 
 - `numbers_checked` is the count of numbers actually verified (**new in v1.1**). Put it on the screen. "34 numbers checked, 0 unverified" is the single most convincing thing in the demo for a banking audience, and it costs one variable.
 - `status: "fail"` → send back to the Explanation Agent to regenerate. **Max 2 retries**, then fall back to a plain template rendering of the numbers.
 - **This module is plain Python. It is not an LLM.** Regex extraction plus a whitelist comparison against engine output. An LLM asked to check another LLM can hallucinate agreement, which would leave us with a check that reports success and verifies nothing — worse than having no check at all, because we would trust it.
+- **Plant known-bad numbers in your own test and prove it fails.** A verifier that passes everything is indistinguishable from a verifier that does nothing, and you cannot tell which one you built by watching it pass. `tools/verify_mocks.py` on `main` is a working reference implementation of everything in this section, self-test included — read it before writing your own.
 
 ---
 
@@ -604,6 +689,7 @@ Argue **qualitatively from `evidence`** instead. "Your history shows you sell du
 ```
 
 - `customer_id` is **required** (fixed in v1.1). Without it the frontend cannot call `/api/challenge` or `/api/whatif`, both of which need it in the request body.
+- `generated_at` is a **date**, `"2026-08-26"`, not a timestamp (**pinned in v1.2** — the committed mock has always been a date).
 - `challenge` is `null` on the first response and only populated after the customer picks a plan.
 - `peer_cohort` may be `null` — the frontend must hide that section rather than break.
 - `meta` carries provenance: `returns_data_source`, `n_simulations`, `assumptions_version`, `model_version`. It exists so the demo can answer "where did this number come from" on screen instead of verbally.
@@ -626,8 +712,8 @@ v1.0 described this as "§7 merged with §8". That was wrong: §7 is the trimmed
 | `successful_simulations` | §5 | |
 | `median_corpus`, `p10_corpus`, `p90_corpus` | §5 | the outcome range |
 | `p10_gap_to_goal` | §5 | |
-| `survives_stress` | §6 | |
-| `breaking_combo` | §6 | `null` when it survives |
+| `survives_stress` | §6 | renamed from §6's `survives` by the orchestrator |
+| `breaking_combo` | §6 | `null` when it survives. Each shock carries `annual_probability` (**v1.2**) |
 | `breaking_probability`, `shortfall_if_hit` | §6 | `null` when it survives |
 | `exceeds_risk_ceiling` | §4 | `true` for the deliberately over-aggressive plan |
 | `headline`, `body`, `pros`, `cons` | §8 | the only LLM-written fields in the object |
@@ -645,6 +731,7 @@ v1.0 described this as "§7 merged with §8". That was wrong: §7 is the trimmed
 | `POST` | `/api/plan` | customer form (below) or `{"customer_id": "C001"}` | §11 |
 | `POST` | `/api/challenge` | `{"customer_id": "C001", "chosen_plan_id": "C"}` | §10 |
 | `POST` | `/api/whatif` | `{"customer_id": "C001", "extra_monthly_savings": 10000}` | §11 recomputed |
+| `GET` | `/api/status` | — | which stages are real engines and which are still mocks (**new in v1.2**) |
 
 Frontend form body for `/api/plan`:
 
@@ -670,6 +757,8 @@ Frontend form body for `/api/plan`:
 - `savings_account` is required and separate from `assets`, because `emergency_fund_months` uses only the liquid part. Total assets alone cannot tell us whether the customer can reach any of it in a week.
 - `monthly_expense` is accepted directly from the form. For a form-submitted customer there is no transaction history, so §3's behavioural features are unavailable — in that case `risk.revealed` is `null`, `mismatch` is `false`, and the frontend shows stated risk and `risk_capacity` only. **This is the one path where the differentiator cannot run, and it must degrade cleanly rather than crash.** The demo uses a pinned persona precisely so that it does not hit this path.
 - **Rules:** three endpoints, no business logic, roughly sixty lines. The endpoint calls the pipeline and returns the dictionary. Errors from engines are Python exceptions; the API converts them to a status code and a message.
+- **How `/api/whatif` works** (**v1.2**): the orchestrator adds `extra_monthly_savings` to `profile.monthly_surplus` and re-runs the same pipeline. It is not a second code path, and **§4's signature does not change** — the plan generator simply sees a larger surplus, which is literally what the question asks. Caveat while §4 is still a mock: the surplus in the response moves and the plan numbers do not, so this endpoint must not be demoed until §4 is real.
+- **`GET /api/status`** (**v1.2**) returns each stage as `"engine"` or `"mock"`, plus a count. It exists so nobody has to ask in the group chat what is finished, and so the demo can state out loud which numbers are computed instead of being asked and guessing.
 - CORS must be enabled for the frontend's dev server origin, or every request fails in the browser with an error that looks like a backend bug and is not one. Cost of forgetting: an hour of confusion on integration day.
 
 ---
@@ -725,7 +814,7 @@ Their single source of truth is `UI_REQUIREMENTS.md` plus this contract. They bu
 | 1 | Synthetic Data Generator | Saurabh |
 | 2 | Profile Engine + `risk_capacity` | Saurabh |
 | 3a | Feature extraction (`features.py`) | Saurabh |
-| — | `nifty_yearly_returns.csv`, `assumptions.json` (the numbers) | Saurabh |
+| — | `nifty_yearly_2005_2025.csv`, `assumptions.json` (the numbers) | Saurabh |
 | 3b | Revealed Risk model training ⭐ | Shlok |
 | 4 | Plan Generator (the code that reads `assumptions.json`) | Pushkar |
 | 5 | Monte Carlo | Pushkar |
@@ -779,6 +868,7 @@ Nothing else matters today.
   "matched_on": ["age_band", "income_band", "goal_type", "stated_risk"],
   "age_band": "26-30",
   "income_band": "100000-150000",
+  "goal_type": "house_downpayment",
   "median_monthly_surplus": 38000,
   "median_savings_rate": 0.32,
   "customer_savings_rate": 0.375,
