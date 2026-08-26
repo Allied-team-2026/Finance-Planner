@@ -1,0 +1,36 @@
+{
+  "_mock_note": "Hand-written mock for contract section 5. Sample returns by resampling real historical annual returns with replacement, not from a normal distribution - real returns have fatter tails, so a bell curve quietly overstates the success probability, and resampling is also what captures sequence risk. successful_simulations and p10_gap_to_goal exist because the Explanation Agent needs to say '8,700 of 10,000' and 'falls 3,50,000 short' and is not allowed to calculate either itself.",
+
+  "n_simulations": 10000,
+  "returns_data_source": "nifty_yearly_2005_2025.csv",
+
+  "results": [
+    {
+      "plan_id": "A",
+      "success_probability": 0.87,
+      "successful_simulations": 8700,
+      "median_corpus": 2680000,
+      "p10_corpus": 2150000,
+      "p90_corpus": 3320000,
+      "p10_gap_to_goal": 350000
+    },
+    {
+      "plan_id": "B",
+      "success_probability": 0.71,
+      "successful_simulations": 7100,
+      "median_corpus": 2560000,
+      "p10_corpus": 1780000,
+      "p90_corpus": 3610000,
+      "p10_gap_to_goal": 720000
+    },
+    {
+      "plan_id": "C",
+      "success_probability": 0.64,
+      "successful_simulations": 6400,
+      "median_corpus": 2870000,
+      "p10_corpus": 1620000,
+      "p90_corpus": 4340000,
+      "p10_gap_to_goal": 880000
+    }
+  ]
+}

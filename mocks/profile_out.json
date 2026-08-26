@@ -1,0 +1,31 @@
+{
+  "_mock_note": "Hand-written mock for contract section 2. Every number here is derivable from mocks/customer_C001.json - net_worth from assets minus liabilities, monthly_expense from the transaction month, emergency_fund_months from savings divided by expense. risk_capacity is the 5-component score in section 2, which comes to 5 out of 9 for this customer.",
+
+  "net_worth": 600000,
+  "total_assets": 800000,
+  "total_liabilities": 200000,
+  "monthly_income": 120000,
+  "monthly_expense": 75000,
+  "monthly_surplus": 45000,
+  "existing_emi_total": 8000,
+  "emergency_fund_months": 0.4,
+
+  "risk_capacity": "moderate",
+  "risk_capacity_reasons": [
+    "Monthly surplus of 37% of income is healthy",
+    "Emergency fund covers less than half a month of expenses",
+    "One dependent and an active car loan reduce room for loss",
+    "Five year horizon is long enough to recover from a single bad year"
+  ],
+
+  "expense_breakdown": {
+    "rent": 25000,
+    "groceries": 12000,
+    "emi": 8000,
+    "misc": 13000,
+    "transport": 6000,
+    "dining": 5000,
+    "utilities": 3500,
+    "insurance": 2500
+  }
+}

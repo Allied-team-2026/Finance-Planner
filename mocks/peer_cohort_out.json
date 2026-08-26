@@ -1,0 +1,16 @@
+{
+  "_mock_note": "Hand-written mock for contract section 16. Aggregates only, minimum cohort size 20, never an individual peer - no ID, no row, no 'a customer like you did X'. matched_on records what we actually matched on after any fallback, so the screen can be honest about how tight the match really was. Return null instead of this object if the cohort is under 20 even after dropping stated_risk and then goal_type; a percentile computed from four people is a number a judge can take apart in one question.",
+
+  "cohort_size": 87,
+  "matched_on": ["age_band", "income_band", "goal_type", "stated_risk"],
+  "age_band": "26-30",
+  "income_band": "100000-150000",
+  "goal_type": "house_downpayment",
+  "median_monthly_surplus": 38000,
+  "median_savings_rate": 0.32,
+  "customer_savings_rate": 0.375,
+  "savings_rate_percentile": 68,
+  "mismatch_rate": 0.61,
+  "most_common_plan_label": "Balanced",
+  "most_common_allocation": { "equity": 0.6, "debt": 0.4 }
+}

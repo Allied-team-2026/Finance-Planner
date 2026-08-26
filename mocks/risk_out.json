@@ -1,0 +1,26 @@
+{
+  "_mock_note": "Hand-written mock for contract section 3. NOTE THE FIELD NAMES: this module outputs stated_risk and revealed_risk. Section 7 and the API response use risk.stated and risk.revealed. That rename is done once by the orchestrator and is intentional - do not 'fix' it at either end. risk_capacity does NOT live here; it comes from section 2 and is arithmetic, not a prediction.",
+
+  "stated_risk": "aggressive",
+  "revealed_risk": "moderate",
+  "confidence": 0.82,
+  "mismatch": true,
+
+  "features_used": {
+    "panic_sell_count": 2,
+    "avg_days_to_exit_after_drop": 3.0,
+    "expense_volatility": 0.34,
+    "emergency_fund_months": 0.4,
+    "equity_allocation_pct": 0.5,
+    "budget_overshoot_rate": 0.42
+  },
+
+  "evidence": [
+    "Exited equity mutual funds within 3 days of a 9% market drop in March 2024",
+    "Sold again during a 6% drop in October 2024, this time 90000 rupees of holdings",
+    "Emergency fund covers less than half a month of expenses",
+    "Monthly spending overshoots its own 12 month average 42% of the time"
+  ],
+
+  "model_version": "rr-v1"
+}

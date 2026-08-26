@@ -1,0 +1,16 @@
+{
+  "_mock_note": "Hand-written mock for contract section 10. There is no mock for this in the original section 13 list, but the challenge screen is demo critical and the frontend needs the shape, so it is here. Nest this object under 'challenge' in the API response; it is null until the customer picks a plan. HARD RULE: no invented numbers, and above all no invented probabilities. We cut the adherence model, so a sentence like 'you will abandon this in 7 weeks with 71% probability' describes a number that exists nowhere, our own Verifier would fail it, and it would destroy the credibility the whole project rests on. Argue from evidence instead - quoted verbatim, as below.",
+
+  "chosen_plan_id": "C",
+
+  "challenge": "You have picked the Growth plan, and two things about it are worth sitting with before you commit. First, it is not affordable as it stands: it asks for 52,000 a month against a monthly surplus of 45,000, which leaves you 7,000 short every month, so something else in your budget would have to give. Second, and this is the part your own history speaks to, it puts 85% into equity. Your transaction history shows you exited equity mutual funds within 3 days of a 9% market drop in March 2024, and sold again during a 6% drop in October 2024. A plan is only as good as your willingness to stay in it during a bad year, and the plans with the highest projected returns are exactly the ones that fall furthest when a bad year arrives. The Steady plan asks for 35,000, stays within what your finances can absorb, and was the only one of the three still standing after our stress test.",
+
+  "evidence_cited": [
+    "Exited equity mutual funds within 3 days of a 9% market drop in March 2024",
+    "Sold again during a 6% drop in October 2024, this time 90000 rupees of holdings"
+  ],
+
+  "alternative_suggested": "A",
+
+  "numbers_used": [52000, 45000, 7000, 0.85, 35000, 3]
+}

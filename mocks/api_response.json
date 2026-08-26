@@ -4,6 +4,13 @@
   "customer_name": "Rahul Mehta",
   "generated_at": "2026-08-25",
 
+  "context": {
+    "age": 28,
+    "dependents": 1,
+    "employment_type": "salaried",
+    "city_tier": "metro"
+  },
+
   "profile": {
     "net_worth": 600000,
     "total_assets": 800000,
@@ -74,6 +81,7 @@
       "plan_id": "A",
       "label": "Steady",
       "monthly_investment": 35000,
+      "surplus_after_investment": 10000,
       "allocation": { "equity": 0.4, "debt": 0.6 },
       "expected_annual_return": 0.09,
       "projected_corpus": 2620000,
@@ -82,15 +90,18 @@
       "shortfall": 0,
       "feasible": true,
       "success_probability": 0.87,
+      "successful_simulations": 8700,
       "median_corpus": 2680000,
       "p10_corpus": 2150000,
       "p90_corpus": 3320000,
+      "p10_gap_to_goal": 350000,
       "survives_stress": true,
       "breaking_combo": null,
       "breaking_probability": null,
       "shortfall_if_hit": null,
+      "exceeds_risk_ceiling": false,
       "headline": "Invest 35,000 a month, weighted towards debt",
-      "body": "This plan puts 40% of your monthly investment into equity and 60% into debt, and reaches a projected 26,20,000 against your 25,00,000 target in five years. It asks for 35,000 of your 45,000 monthly surplus, which leaves you 10,000 of breathing room each month. Out of 10,000 simulations run on twenty years of historical market returns, 8,700 reached your goal, and the plan also held up against every combination of shock events we tested.",
+      "body": "This plan puts 40% of your monthly investment into equity and 60% into debt, and reaches a projected 26,20,000 against your 25,00,000 target in five years. It asks for 35,000 of your 45,000 monthly surplus, which leaves you 10,000 of breathing room each month. Out of 10,000 simulations run on real historical market returns, 8,700 reached your goal, and the plan also held up against every combination of shock events we tested.",
       "pros": [
         "Highest chance of reaching your goal of the three options",
         "The only plan that survives our stress test",
@@ -105,6 +116,7 @@
       "plan_id": "B",
       "label": "Balanced",
       "monthly_investment": 30000,
+      "surplus_after_investment": 15000,
       "allocation": { "equity": 0.65, "debt": 0.35 },
       "expected_annual_return": 0.11,
       "projected_corpus": 2540000,
@@ -113,9 +125,11 @@
       "shortfall": 0,
       "feasible": true,
       "success_probability": 0.71,
+      "successful_simulations": 7100,
       "median_corpus": 2560000,
       "p10_corpus": 1780000,
       "p90_corpus": 3610000,
+      "p10_gap_to_goal": 720000,
       "survives_stress": false,
       "breaking_combo": [
         {
@@ -131,6 +145,7 @@
       ],
       "breaking_probability": 0.023,
       "shortfall_if_hit": 420000,
+      "exceeds_risk_ceiling": false,
       "headline": "Invest 30,000 a month with more in equity",
       "body": "This plan asks for 5,000 less per month than the Steady plan by putting 65% into equity and relying on higher expected returns to make up the difference. It reaches a projected 25,40,000 against your 25,00,000 target, but only 7,100 of 10,000 simulations actually got there, and the weaker outcomes land as low as 17,80,000. It also fails our stress test: a smaller than expected appraisal combined with a family medical expense would leave you 4,20,000 short.",
       "pros": [
@@ -147,6 +162,7 @@
       "plan_id": "C",
       "label": "Growth",
       "monthly_investment": 52000,
+      "surplus_after_investment": -7000,
       "allocation": { "equity": 0.85, "debt": 0.15 },
       "expected_annual_return": 0.13,
       "projected_corpus": 2910000,
@@ -155,9 +171,11 @@
       "shortfall": 7000,
       "feasible": false,
       "success_probability": 0.64,
+      "successful_simulations": 6400,
       "median_corpus": 2870000,
       "p10_corpus": 1620000,
       "p90_corpus": 4340000,
+      "p10_gap_to_goal": 880000,
       "survives_stress": false,
       "breaking_combo": [
         {
@@ -178,6 +196,7 @@
       ],
       "breaking_probability": 0.007,
       "shortfall_if_hit": 690000,
+      "exceeds_risk_ceiling": true,
       "headline": "Invest 52,000 a month, mostly in equity",
       "body": "This plan targets the highest projected corpus at 29,10,000 by putting 85% into equity. It is not affordable on your current finances: it needs 52,000 a month against a surplus of 45,000, leaving you 7,000 short every month. Even setting affordability aside, only 6,400 of 10,000 simulations reached your goal, because a heavy equity position over five years is exposed to a single bad year near the end.",
       "pros": [
@@ -224,7 +243,7 @@
   },
 
   "meta": {
-    "returns_data_source": "nifty_yearly_returns.csv",
+    "returns_data_source": "nifty_yearly_2005_2025.csv",
     "n_simulations": 10000,
     "assumptions_version": "assump-v1",
     "model_version": "rr-v1"
