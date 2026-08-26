@@ -101,15 +101,16 @@
       "shortfall_if_hit": null,
       "exceeds_risk_ceiling": false,
       "headline": "Invest 35,000 a month, weighted towards debt",
-      "body": "This plan puts 40% of your monthly investment into equity and 60% into debt, and reaches a projected 26,20,000 against your 25,00,000 target in five years. It asks for 35,000 of your 45,000 monthly surplus, which leaves you 10,000 of breathing room each month. Out of 10,000 simulations run on real historical market returns, 8,700 reached your goal, and the plan also held up against every combination of shock events we tested.",
+      "body": "This plan puts 40% of your monthly investment into equity and 60% into debt, and reaches a projected 26,20,000 against your 25,00,000 target in five years. It asks for 35,000 of your 45,000 monthly surplus, which leaves you 10,000 of breathing room each month. Out of 10,000 simulations run on real historical market returns, 8,700 reached your goal. It also held up against every combination of shock events we tested.",
       "pros": [
-        "Highest chance of reaching your goal of the three options",
-        "The only plan that survives our stress test",
-        "Leaves 10,000 a month unallocated for emergencies"
+        "Survives every shock combination the stress test tried",
+        "Leaves 10,000 a month unallocated for emergencies",
+        "Stronger outcomes reach 33,20,000"
       ],
       "cons": [
-        "Needs 5,000 more per month than the Balanced plan",
-        "Lower upside if markets perform strongly"
+        "Costs 5,000 more per month than the cheapest plan",
+        "Weakest outcomes fall 3,50,000 short of target",
+        "Only 87% of simulations reached your goal"
       ]
     },
     {
@@ -148,16 +149,17 @@
       "breaking_probability": 0.023,
       "shortfall_if_hit": 420000,
       "exceeds_risk_ceiling": false,
-      "headline": "Invest 30,000 a month with more in equity",
-      "body": "This plan asks for 5,000 less per month than the Steady plan by putting 65% into equity and relying on higher expected returns to make up the difference. It reaches a projected 25,40,000 against your 25,00,000 target, but only 7,100 of 10,000 simulations actually got there, and the weaker outcomes land as low as 17,80,000. It also fails our stress test: a smaller than expected appraisal combined with a family medical expense would leave you 4,20,000 short.",
+      "headline": "Invest 30,000 a month, with more in equity",
+      "body": "This plan puts 65% of your monthly investment into equity and 35% into debt, and reaches a projected 25,40,000 against your 25,00,000 target in five years. It asks for 30,000 of your 45,000 monthly surplus, which leaves you 15,000 of breathing room each month. Out of 10,000 simulations run on real historical market returns, 7,100 reached your goal. It does not survive our stress test: \"Appraisal comes in at 4% instead of 10%\" and \"Family medical expense\" landing together would leave you 4,20,000 short of the goal.",
       "pros": [
-        "Costs 5,000 less per month than the Steady plan",
-        "Stronger upside if markets perform well, reaching 36,10,000 in the best outcomes"
+        "Leaves 15,000 a month unallocated for emergencies",
+        "Asks the least of your monthly surplus",
+        "Stronger outcomes reach 36,10,000"
       ],
       "cons": [
-        "Only 71% of simulations reached your goal",
-        "Breaks if a weak appraisal and a medical expense land in the same year",
-        "Weakest outcomes fall 7,20,000 short of target"
+        "Breaks under stress testing, leaving you 4,20,000 short",
+        "Weakest outcomes fall 7,20,000 short of target",
+        "Only 71% of simulations reached your goal"
       ]
     },
     {
@@ -167,17 +169,17 @@
       "surplus_after_investment": -7000,
       "allocation": { "equity": 0.85, "debt": 0.15 },
       "expected_annual_return": 0.13,
-      "projected_corpus": 2910000,
+      "projected_corpus": 4410000,
       "goal_amount": 2500000,
       "years": 5,
       "shortfall": 7000,
       "feasible": false,
-      "success_probability": 0.64,
-      "successful_simulations": 6400,
-      "median_corpus": 2870000,
-      "p10_corpus": 1620000,
-      "p90_corpus": 4340000,
-      "p10_gap_to_goal": 880000,
+      "success_probability": 0.95,
+      "successful_simulations": 9500,
+      "median_corpus": 4690000,
+      "p10_corpus": 2920000,
+      "p90_corpus": 6720000,
+      "p10_gap_to_goal": 0,
       "survives_stress": false,
       "breaking_combo": [
         {
@@ -203,23 +205,24 @@
       "shortfall_if_hit": 690000,
       "exceeds_risk_ceiling": true,
       "headline": "Invest 52,000 a month, mostly in equity",
-      "body": "This plan targets the highest projected corpus at 29,10,000 by putting 85% into equity. It is not affordable on your current finances: it needs 52,000 a month against a surplus of 45,000, leaving you 7,000 short every month. Even setting affordability aside, only 6,400 of 10,000 simulations reached your goal, because a heavy equity position over five years is exposed to a single bad year near the end.",
+      "body": "This plan puts 85% of your monthly investment into equity and 15% into debt, and reaches a projected 44,10,000 against your 25,00,000 target in five years. It is not affordable on your current finances: it needs 52,000 a month against a surplus of 45,000, leaving you 7,000 short every month. Out of 10,000 simulations run on real historical market returns, 9,500 reached your goal. It does not survive our stress test: \"Appraisal comes in at 4% instead of 10%\", \"Family medical expense\" and \"Landlord raises rent by 15%\" landing together would leave you 6,90,000 short of the goal.",
       "pros": [
-        "Highest projected corpus of the three plans",
-        "Best outcomes reach 43,40,000"
+        "Of the plans offered, the highest chance of reaching your goal",
+        "Stronger outcomes reach 67,20,000"
       ],
       "cons": [
         "Not affordable: needs 7,000 more per month than you have spare",
-        "Lowest success probability at 64%",
-        "Equity allocation is more aggressive than your behaviour suggests you will hold",
-        "Weakest outcomes fall 8,80,000 short of target"
+        "Costs 22,000 more per month than the cheapest plan",
+        "Breaks under stress testing, leaving you 6,90,000 short",
+        "Equity allocation is more aggressive than your own history supports",
+        "Even here, 95% of simulations reached the goal rather than all of them"
       ]
     }
   ],
 
-  "goal_priority_note": "Your house down payment is funded first because it is five years away, while the education goal is twelve years out and can absorb a slower start. Once the house goal is met, the same monthly amount redirected to education comfortably covers it.",
+  "goal_priority_note": "Your house downpayment is funded first because it is five years away, while the child education goal is twelve years out and can absorb a slower start. The nearer deadline is the binding one, so it sets the monthly figure.",
 
-  "mismatch_note": "You described your approach as aggressive, but your transaction history looks moderate. On two occasions you sold equity within days of a market fall. That matters here because the plans with the highest projected returns are exactly the ones that fall furthest during a bad year, and a plan you exit early performs worse than a slower plan you stay in.",
+  "mismatch_note": "You described your approach as aggressive, but your transaction history looks moderate. On two occasions you sold equity within days of a market fall. That matters here because the plans with the highest projected returns are exactly the ones that fall furthest during a bad year, and a plan left early performs worse than a slower plan held to the end.",
 
   "peer_cohort": {
     "cohort_size": 87,
@@ -240,7 +243,7 @@
 
   "verifier": {
     "status": "pass",
-    "numbers_checked": 34,
+    "numbers_checked": 87,
     "unverified_numbers": [],
     "suitability_flags": [
       "Plan C equity allocation 0.85 exceeds revealed risk level 'moderate'"
