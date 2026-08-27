@@ -198,12 +198,23 @@ def run_engines(customer_id, extra_monthly_savings=0):
     """
     customer = run("customer", customer_id)
     profile = run("profile", customer)
+
+    # §3a takes the profile as well as the customer, because
+    # `emergency_fund_months` is §2's number and recomputing it here would put a
+    # second copy of §2's formula in a second file.
+    #
+    # It runs before the what-if is applied, and must keep running before it.
+    # Revealed risk describes what this customer has already done with their
+    # money, so a hypothetical extra 5,000 a month must not be able to move the
+    # risk prediction. Today no feature reads the surplus, so the order does not
+    # change any number - it stops the day someone adds one.
+    features = run("features", customer, profile)
+    risk = run("risk", features)
+
     if extra_monthly_savings:
         profile = dict(profile)
         profile["monthly_surplus"] += extra_monthly_savings
 
-    features = run("features", customer)
-    risk = run("risk", features)
     plans = run("plans", profile, risk)
     montecarlo = run("montecarlo", plans)
     stress = run("stress", plans, profile)
