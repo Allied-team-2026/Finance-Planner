@@ -225,6 +225,8 @@ data/*.csv
 !data/sample_*.csv
 data/*.parquet
 scratch/
+# Handoff notes and messages written for teammates - not part of the project
+outputs/
 
 # macOS
 .DS_Store
