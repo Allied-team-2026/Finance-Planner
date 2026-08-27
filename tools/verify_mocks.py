@@ -144,12 +144,18 @@ check(f"risk_capacity recomputed (score {score}/9)", prof["risk_capacity"], band
 
 # ------------------------------------------------- 2. features and risk
 
-check("features.panic_sell_count == sell events in record",
-      feat["panic_sell_count"],
-      sum(1 for e in cust["investment_events"] if e["action"] == "sell"))
-sells = [e["days_after_drop"] for e in cust["investment_events"] if e["action"] == "sell"]
-check("features.avg_days_to_exit_after_drop == mean of sell events",
-      feat["avg_days_to_exit_after_drop"], round(sum(sells) / len(sells), 1))
+# A panic sell is a sell that followed a market drop, which the record marks by
+# setting days_after_drop. A sell in a calm market leaves it null and is not a panic.
+# This used to count every sell. Both of C001's sells follow drops, so both versions
+# give 2 and both pass today - but the loose one stops meaning what its name says the
+# moment §1 generates a customer who sells in a calm market.
+panic = [e["days_after_drop"] for e in cust["investment_events"]
+         if e["action"] == "sell" and e["days_after_drop"] is not None]
+check("features.panic_sell_count == sells that followed a drop",
+      feat["panic_sell_count"], len(panic))
+check("features.avg_days_to_exit_after_drop == mean over those same sells",
+      feat["avg_days_to_exit_after_drop"],
+      round(sum(panic) / len(panic), 1) if panic else None)
 check("features.equity_allocation_pct == equity_mf / total assets",
       feat["equity_allocation_pct"], round(cust["assets"]["equity_mf"] / assets, 4))
 check("features.emergency_fund_months matches profile",
