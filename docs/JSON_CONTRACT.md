@@ -275,6 +275,21 @@ This module is split in two because it is the differentiator and it has a natura
 
 **3a — Feature extraction · Owner: Saurabh** · **In:** customer record + Profile Engine output · **Out:** the `features_used` object below. Deterministic Python, no ML. This is a standalone module (`features.py`) that anyone can test.
 
+**The six features, defined exactly — settled 27 Aug.** Until now two of them existed only as a number in the example below. `expense_volatility` had no definition anywhere in this document. `budget_overshoot_rate` did have one, but it was buried in the evidence sentence at the end of this section, written for a human to read rather than for an engineer to implement.
+
+| feature | definition | C001 |
+|---|---|---|
+| `panic_sell_count` | count of `investment_events` where `action == "sell"` **and `days_after_drop` is not null**. A sell in a calm market is not a panic sell. | 2 |
+| `avg_days_to_exit_after_drop` | `round(mean(days_after_drop), 1)` over **exactly the events counted above**, so the two features always describe the same population. `null` when `panic_sell_count` is 0 — never `0.0`, which would read as the fastest possible panic. §3b imputes it with the training-set median. | 3.0 |
+| `expense_volatility` | `round(statistics.stdev(monthly_totals) / mean(monthly_totals), 2)` over the last 12 monthly expense totals. Sample standard deviation, `n-1`, **not** population. | 0.34 |
+| `emergency_fund_months` | **copied from §2's output**, never recomputed. This is the reason §3a takes the profile as well as the record. | 0.4 |
+| `equity_allocation_pct` | `round(assets.equity_mf / total_assets, 4)` | 0.5 |
+| `budget_overshoot_rate` | `round(share of the last 12 months whose total expense exceeded the 12-month mean, 2)`. Strictly greater than, not `>=`. | 0.42 |
+
+**`panic_sell_count` changed meaning today.** `tools/verify_mocks.py` counted every sell. Both of C001's sells follow drops, so the old and new definitions both give 2 and both pass — they diverge the first time §1 generates a customer who sells in a calm market. `verify_mocks.py` has been tightened to match this table. Do not implement the loose version.
+
+**Two of the six cannot be reproduced from `mocks/customer_C001.json`.** It carries one representative month, and `expense_volatility` and `budget_overshoot_rate` both need twelve. Test those two against a small hand-built fixture with a known mean and standard deviation. A test that claims full equality with `features_out.json` starting from the mock record is a test that lies.
+
 **3b — Model training + prediction · Owner: Shlok** · **In:** `features_used` + `ground_truth_risk` labels · **Out:** `revealed_risk`, `confidence`, `mismatch`, `evidence`, `model_version`.
 
 **Combined output of §3:**
