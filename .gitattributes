@@ -1,0 +1,6 @@
+# One decision about line endings, made here, so a Windows clone and a Mac clone
+# never produce a whole-file diff for a change nobody actually made. text=auto lets
+# git detect binary files on its own; eol=lf pins the working tree as well, which
+# matters because data/nifty_yearly_2005_2025.csv is verified by sha256 and its
+# bytes have to be identical on every machine.
+* text=auto eol=lf
