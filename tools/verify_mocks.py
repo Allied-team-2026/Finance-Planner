@@ -435,7 +435,7 @@ NEGATIVE_CASES = [
     ("agent did subtraction",
      "leaves you 10,000 of breathing room", "leaves you 11,000 of breathing room"),
     ("lakh figure slightly off",
-     "projected 26,20,000", "projected 26,30,000"),
+     "projected 26,60,000", "projected 26,70,000"),
     ("percent converted by the agent",
      "Only 71% of simulations", "Only 72% of simulations"),
     ("plausible but absent number",

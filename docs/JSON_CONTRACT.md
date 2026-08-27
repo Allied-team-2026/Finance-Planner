@@ -339,7 +339,7 @@ This module is split in two because it is the differentiator and it has a natura
       "monthly_investment": 35000,
       "allocation": { "equity": 0.40, "debt": 0.60 },
       "expected_annual_return": 0.09,
-      "projected_corpus": 2620000,
+      "projected_corpus": 2660000,
       "goal_amount": 2500000,
       "years": 5,
       "shortfall": 0,
@@ -352,7 +352,7 @@ This module is split in two because it is the differentiator and it has a natura
       "monthly_investment": 30000,
       "allocation": { "equity": 0.65, "debt": 0.35 },
       "expected_annual_return": 0.11,
-      "projected_corpus": 2540000,
+      "projected_corpus": 2410000,
       "goal_amount": 2500000,
       "years": 5,
       "shortfall": 0,
@@ -365,6 +365,7 @@ This module is split in two because it is the differentiator and it has a natura
 ```
 
 - `surplus_after_investment = monthly_surplus - monthly_investment` (**new in v1.1**). Negative when the plan is not affordable. It exists because the Explanation Agent needs to say "this leaves you 10,000 of breathing room" and **the agent is not allowed to do that subtraction itself** — see the note at the end of §7.
+- `projected_corpus` is a **SIP annuity-due** total: `monthly_investment * (((1 + r)**n - 1) / r) * (1 + r)` where `r = expected_annual_return / 12` and `n = years * 12`, then **rounded to the nearest 10,000**. The trailing `* (1 + r)` is there because a SIP debits at the *start* of the month, so every instalment earns one extra month of growth; leaving it off understates a five-year plan by roughly 20,000. The rounding is deliberate - a five-year projection has no business claiming rupee precision - and it keeps the number identical on every machine. This was undefined until 27 Aug, and two of the three plan corpus figures in the mocks were hand-written and wrong as a result.
 - Generate **2 or 3 plans** — the brief says "couple of plans". Not ten.
 - `feasible: false` and a positive `shortfall` if `monthly_investment > monthly_surplus`. Never silently propose a plan the customer cannot afford.
 - **All return assumptions live in one file, `assumptions.json`** — nothing hardcoded in the logic. One person owns financial correctness here.
@@ -508,7 +509,7 @@ Every one of these three is a line of arithmetic, and every one of them makes a 
       "monthly_investment": 35000,
       "surplus_after_investment": 10000,
       "allocation": { "equity": 0.40, "debt": 0.60 },
-      "projected_corpus": 2620000,
+      "projected_corpus": 2660000,
       "goal_amount": 2500000,
       "years": 5,
       "feasible": true,
@@ -583,7 +584,7 @@ If you are writing agent prompts and you find yourself wanting a number that is 
   ],
   "goal_priority_note": "Your house goal is funded first because...",
   "mismatch_note": "You described yourself as aggressive, but your past behaviour looks moderate.",
-  "numbers_used": [35000, 2620000, 0.87, 2500000, 5, 0.40, 0.60]
+  "numbers_used": [35000, 2660000, 0.87, 2500000, 5, 0.40, 0.60]
 }
 ```
 
