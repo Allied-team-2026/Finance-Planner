@@ -79,43 +79,70 @@ def test_rename_seam_holds():
         assert "survives" not in plan
 
 
-def test_a_real_engine_receives_the_arguments_it_expects():
-    """The defect this file used to have, now pinned.
+def arguments_handed_to(stage, target, mock_file, **what_if):
+    """Run the pipeline with one stage swapped for a stub that records its input.
 
-    Substitutes a recording stub for the plan generator by exactly the mechanism
-    REAL_ENGINES uses, then checks what §4 was actually handed. This fails if the
-    wiring passes no arguments, the wrong arguments, or them in the wrong order -
-    none of which a mock can notice, because a mock ignores what it is given.
+    Swaps it by exactly the mechanism REAL_ENGINES uses, so this catches wiring
+    that passes no arguments, the wrong ones, or them in the wrong order - none of
+    which a mock can notice, because a mock ignores what it is given. Callers
+    unpack the result, so the unpack is itself the check on how many arguments the
+    stage was handed.
 
-    Written as a stub rather than against the real engine on purpose: it has to
-    hold now, while every stage is still a mock, or it is not a check at all.
+    Written against a stub rather than a real engine on purpose: it has to hold
+    now, while every stage is still a mock, or it is not a check at all.
     """
-    seen = {}
+    module_name, function_name = target.split(":")
+    seen = []
 
-    def generate(profile, risk):
-        seen["profile"], seen["risk"] = profile, risk
-        return load_mock("plans_out.json")
+    def record(*args):
+        seen.append(args)
+        return load_mock(mock_file)
 
-    stub = types.ModuleType("engines.plan_generator")
-    stub.generate = generate
-    sys.modules["engines.plan_generator"] = stub
-    was_real = "plans" in pipeline.REAL_ENGINES
-    pipeline.REAL_ENGINES.add("plans")
+    stub = types.ModuleType(module_name)
+    setattr(stub, function_name, record)
+    sys.modules[module_name] = stub
+    was_real = stage in pipeline.REAL_ENGINES
+    pipeline.REAL_ENGINES.add(stage)
     try:
-        stages()
+        run_stages("C001", **what_if)
     finally:
-        # Restore, do not discard. An earlier version of this cleanup removed
-        # "plans" unconditionally, so on a machine where the real engine was
-        # switched on this test quietly switched it back off for everything that
-        # ran after it - and the suite then reported the engine as passing when
-        # it had never been called.
+        # Restore, do not discard. An earlier version of this cleanup removed the
+        # stage unconditionally, so on a machine where the real engine was
+        # switched on it quietly switched it back off for everything that ran
+        # after it - and the suite then reported the engine as passing when it had
+        # never been called.
         if not was_real:
-            pipeline.REAL_ENGINES.discard("plans")
-        sys.modules.pop("engines.plan_generator", None)
+            pipeline.REAL_ENGINES.discard(stage)
+        sys.modules.pop(module_name, None)
 
-    assert seen, "§4 was never called - REAL_ENGINES did not take effect"
-    assert seen["profile"] == load_mock("profile_out.json")
-    assert seen["risk"] == load_mock("risk_out.json")
+    assert seen, f"{stage} was never called - REAL_ENGINES did not take effect"
+    return seen[0]
+
+
+def test_a_real_engine_receives_the_arguments_it_expects():
+    """The defect this file used to have, now pinned. §4 takes profile, risk."""
+    profile, risk = arguments_handed_to("plans", "engines.plan_generator:generate",
+                                        "plans_out.json")
+    assert profile == load_mock("profile_out.json")
+    assert risk == load_mock("risk_out.json")
+
+
+def test_features_is_handed_the_profile_the_contract_promises_it():
+    """§3a takes the customer record AND the profile - contract line 276.
+
+    The wiring passed only the customer until 27 Aug, which no mock could notice.
+    Saurabh caught it while reading the contract against the code, before writing
+    a line of §3a.
+
+    Runs with a what-if on purpose. §3a must see the real profile, not the
+    inflated one: revealed risk describes what this customer has already done, so
+    a hypothetical 5,000 a month must not be able to move the risk prediction.
+    """
+    customer, profile = arguments_handed_to("features", "engines.features:extract",
+                                            "features_out.json",
+                                            extra_monthly_savings=5000)
+    assert customer == load_mock("customer_C001.json")
+    assert profile == load_mock("profile_out.json")
 
 
 def test_a_what_if_only_moves_the_surplus():
