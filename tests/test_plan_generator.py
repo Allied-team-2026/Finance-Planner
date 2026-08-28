@@ -117,3 +117,17 @@ def test_calculate_affordability_unfeasible():
     assert res["surplus_after_investment"] == -7000
     assert res["shortfall"] == 7000
     assert res["feasible"] is False
+
+def test_investment_sizing_factors():
+    assumptions = _load_assumptions()
+    assert "investment_sizing" in assumptions
+    sizing = assumptions["investment_sizing"]
+    
+    surplus = 45000
+    plan_a_inv = int(round(surplus * sizing["Plan A"]))
+    plan_b_inv = int(round(surplus * sizing["Plan B"]))
+    plan_c_inv = int(round(surplus * sizing["Plan C"]))
+    
+    assert plan_a_inv == 35000
+    assert plan_b_inv == 30000
+    assert plan_c_inv == 52000
