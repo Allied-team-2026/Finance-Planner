@@ -87,3 +87,83 @@ def test_c001_real_payload():
     assert payload["verification"] == verif
     assert payload["profile"]["monthly_surplus"] == 45000
     assert payload["peer_cohort"]["cohort_size"] == 20
+
+import os
+from unittest.mock import patch, MagicMock
+
+@pytest.fixture
+def base_groq_response():
+    return {
+        "chosen_plan_id": "C",
+        "challenge": "Plan C invests 52000, which exceeds the 45000 surplus.",
+        "evidence_cited": ["Surplus is 45000"],
+        "alternative_suggested": "Consider Plan A which invests 35000.",
+        "numbers_used": [52000, 45000, 35000]
+    }
+
+def mock_groq_client(response_dict):
+    mock = MagicMock()
+    mock.chat.completions.create.return_value.choices = [
+        MagicMock(message=MagicMock(content=json.dumps(response_dict)))
+    ]
+    return mock
+
+@patch("groq.Groq")
+@patch.dict(os.environ, {"GROQ_API_KEY": "fake_key"})
+def test_valid_challenge_passes(mock_groq, base_bundle, base_explanation, base_verification, base_groq_response):
+    base_bundle["plans"].append({"plan_id": "C", "monthly_investment": 52000})
+    mock_groq.return_value = mock_groq_client(base_groq_response)
+    from agents.challenger import challenge
+    result = challenge(base_bundle, base_explanation, base_verification, "C")
+    assert result["chosen_plan_id"] == "C"
+    assert "Plan C invests" in result["challenge"]
+
+@patch("groq.Groq")
+@patch.dict(os.environ, {"GROQ_API_KEY": "fake_key"})
+def test_wrong_chosen_plan_id_fails(mock_groq, base_bundle, base_explanation, base_verification, base_groq_response):
+    base_groq_response["chosen_plan_id"] = "A"
+    mock_groq.return_value = mock_groq_client(base_groq_response)
+    from agents.challenger import challenge
+    with pytest.raises(ValueError, match="does not match input"):
+        challenge(base_bundle, base_explanation, base_verification, "C")
+
+@patch("groq.Groq")
+@patch.dict(os.environ, {"GROQ_API_KEY": "fake_key"})
+def test_fabricated_number_fails(mock_groq, base_bundle, base_explanation, base_verification, base_groq_response):
+    base_bundle["plans"].append({"plan_id": "C", "monthly_investment": 52000})
+    base_groq_response["challenge"] += " And 99999 fabricated."
+    mock_groq.return_value = mock_groq_client(base_groq_response)
+    from agents.challenger import challenge
+    with pytest.raises(ValueError, match="not found in payload"):
+        challenge(base_bundle, base_explanation, base_verification, "C")
+
+@patch("groq.Groq")
+@patch.dict(os.environ, {"GROQ_API_KEY": "fake_key"})
+def test_privacy_leak_fails(mock_groq, base_bundle, base_explanation, base_verification, base_groq_response):
+    base_bundle["plans"].append({"plan_id": "C", "monthly_investment": 52000})
+    base_groq_response["challenge"] += " Customer C001."
+    mock_groq.return_value = mock_groq_client(base_groq_response)
+    from agents.challenger import challenge
+    with pytest.raises(ValueError, match="Privacy violation"):
+        challenge(base_bundle, base_explanation, base_verification, "C")
+
+@patch("groq.Groq")
+@patch.dict(os.environ, {"GROQ_API_KEY": "fake_key"})
+def test_ground_truth_risk_leak_fails(mock_groq, base_bundle, base_explanation, base_verification, base_groq_response):
+    base_bundle["plans"].append({"plan_id": "C", "monthly_investment": 52000})
+    base_groq_response["challenge"] += " ground_truth_risk is moderate."
+    mock_groq.return_value = mock_groq_client(base_groq_response)
+    from agents.challenger import challenge
+    with pytest.raises(ValueError, match="Privacy violation"):
+        challenge(base_bundle, base_explanation, base_verification, "C")
+
+@patch("groq.Groq")
+@patch.dict(os.environ, {"GROQ_API_KEY": "fake_key"})
+def test_missing_required_field(mock_groq, base_bundle, base_explanation, base_verification, base_groq_response):
+    base_bundle["plans"].append({"plan_id": "C", "monthly_investment": 52000})
+    del base_groq_response["challenge"]
+    mock_groq.return_value = mock_groq_client(base_groq_response)
+    from agents.challenger import challenge
+    with pytest.raises(ValueError, match="Missing or invalid"):
+        challenge(base_bundle, base_explanation, base_verification, "C")
+
