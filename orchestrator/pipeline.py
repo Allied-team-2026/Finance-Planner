@@ -256,5 +256,5 @@ def make_plan(customer_id, extra_monthly_savings=0):
 
 def make_challenge(customer_id, chosen_plan_id):
     """Runs only after the customer picks a plan."""
-    bundle = run_engines(customer_id)["bundle"]
-    return run("challenge", bundle, chosen_plan_id)
+    s = run_stages(customer_id)
+    return run("challenge", s["bundle"], s["explanation"], s["verify"], chosen_plan_id)
