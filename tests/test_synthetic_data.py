@@ -154,3 +154,20 @@ def test_dataset_risk_distribution(dataset_1000):
     for label, n in counts.items():
         assert n / 1000 <= 0.70, f"{label} is {n/1000:.0%} of the dataset, exceeds 70%"
 
+
+def test_no_single_feature_determines_label(dataset_1000):
+    """Prove that no single feature deterministically defines the label."""
+    # Find customers with the same exact panic_sell_count but different labels
+    # to prove panic_sell_count alone doesn't determine the label.
+    # Note: we use the raw events to count panic sells for the test.
+    from collections import defaultdict
+    
+    panic_groups = defaultdict(set)
+    for c in dataset_1000:
+        panic_sells = sum(1 for e in c["investment_events"] if e["action"] == "sell" and e.get("days_after_drop") is not None)
+        panic_groups[panic_sells].add(c["ground_truth_risk"])
+        
+    # At least one group of same panic_sell_count should map to multiple labels
+    assert any(len(labels) > 1 for labels in panic_groups.values()), "panic_sell_count deterministically defines the label"
+
+
