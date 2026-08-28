@@ -1,0 +1,106 @@
+{
+  "customer_name": "Priya Patel",
+  "profile": {
+    "net_worth": 950000,
+    "total_assets": 1200000,
+    "total_liabilities": 250000,
+    "monthly_income": 140000,
+    "monthly_expense": 80000,
+    "monthly_surplus": 60000,
+    "existing_emi_total": 12000,
+    "emergency_fund_months": 5.0,
+    "expense_breakdown": {
+      "rent": 28000,
+      "groceries": 14000,
+      "emi": 12000,
+      "transport": 7000,
+      "dining": 6000,
+      "misc": 13000
+    }
+  },
+  "risk": {
+    "stated": "moderate",
+    "revealed": "moderate",
+    "confidence": 0.88,
+    "mismatch": false,
+    "risk_capacity": "moderate",
+    "features_used": {
+      "panic_sell_count": 0,
+      "avg_days_to_exit_after_drop": 0.0,
+      "expense_volatility": 0.125,
+      "emergency_fund_months": 5.0,
+      "equity_allocation_pct": 0.45,
+      "budget_overshoot_rate": 0.1667
+    },
+    "evidence": [
+      "Zero panic sell events recorded during past market corrections",
+      "Robust liquid emergency buffer covering 5.0 months of living expenses",
+      "Stable discretionary spending pattern across 24-month observation window"
+    ],
+    "model_version": "rr-v1"
+  },
+  "peer_cohort": {
+    "cohort_id": "COHORT_30_IND_MOD_MOD",
+    "sample_size": 915,
+    "similarity_criteria": {
+      "age_band": "28–32 yrs",
+      "income_band": "₹1,20,000 – ₹1,60,000 / mo",
+      "risk_band": "Revealed Moderate",
+      "primary_goal": "Retirement & Wealth Growth (10 yr)"
+    },
+    "mismatch_metrics": {
+      "mismatch_count": 118,
+      "mismatch_rate": 0.129,
+      "mismatch_pattern_summary": "High alignment between self-reported risk preference and historical asset preservation"
+    },
+    "typical_plan": {
+      "preferred_plan_id": "A",
+      "preferred_plan_name": "Balanced Compounder Plan",
+      "adoption_rate": 0.74,
+      "median_monthly_investment": 45000,
+      "typical_allocation": {
+        "equity": 0.50,
+        "debt": 0.50
+      },
+      "historical_goal_success_rate": 0.94
+    },
+    "customer_benchmarks": {
+      "savings_rate_percentile": 0.81,
+      "expense_discipline_percentile": 0.88,
+      "emergency_buffer_percentile": 0.76,
+      "surplus_rank_summary": "Higher monthly surplus than 81% of peers"
+    }
+  },
+  "plans": [
+    {
+      "plan_id": "A",
+      "label": "Balanced Compounder",
+      "monthly_investment": 45000,
+      "allocation": {
+        "equity": 0.50,
+        "debt": 0.50
+      },
+      "expected_annual_return": 0.10,
+      "projected_corpus": 3800000,
+      "goal_amount": 3500000,
+      "years": 5,
+      "shortfall": 0,
+      "feasible": true,
+      "success_probability": 0.92,
+      "survives_stress": true,
+      "breaking_combo": null,
+      "headline": "Invest ₹45,000 a month with balanced allocation",
+      "body": "This plan puts 50% in equity and 50% in debt, aligned with your stated and behavioral moderate risk comfort.",
+      "pros": [
+        "High success probability (92%)",
+        "Consistent dividend and capital growth"
+      ],
+      "cons": [
+        "Moderate equity exposure"
+      ]
+    }
+  ],
+  "verifier": {
+    "status": "pass"
+  }
+}

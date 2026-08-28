@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finance-Planner — Screen 3.6 (Risk Insight) & Screen 3.7 (Similar Profiles)</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              400: '#34d399',
+              500: '#10b981',
+              600: '#059669',
+              900: '#064e3b',
+              950: '#022c22',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React and Babel Standalone -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-emerald-500 selection:text-slate-950">
+  <div id="root"></div>
+
+  <!-- React Application Source -->
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // --- DISPLAY FORMATTERS (Strictly No Calculation in Frontend) ---
+    function formatRupees(value) {
+      if (value === null || value === undefined || isNaN(value)) return "—";
+      const isNegative = value < 0;
+      const absValue = Math.abs(Math.round(value));
+      const str = absValue.toString();
+      let result = "";
+      if (str.length > 3) {
+        const lastThree = str.substring(str.length - 3);
+        const otherNumbers = str.substring(0, str.length - 3);
+        result = otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + lastThree;
+      } else {
+        result = str;
+      }
+      return (isNegative ? "-₹" : "₹") + result;
+    }
+
+    function formatPercent(value, decimals = 0) {
+      if (value === null || value === undefined || isNaN(value)) return "—";
+      const pct = (Number(value) * 100).toFixed(decimals);
+      return `${pct}%`;
+    }
+
+    function formatNumber(value) {
+      if (value === null || value === undefined || isNaN(value)) return "—";
+      return new Intl.NumberFormat("en-IN").format(value);
+    }
+
+    function formatMetric(value, unit = "") {
+      if (value === null || value === undefined || value === "") return "—";
+      return unit ? `${value} ${unit}` : `${value}`;
+    }
+
+    // --- MOCK DATASETS ---
+    const MOCK_DATA_MISMATCH_C001 = {
+      customer_name: "Rahul Sharma",
+      profile: {
+        net_worth: 600000,
+        total_assets: 800000,
+        total_liabilities: 200000,
+        monthly_income: 120000,
+        monthly_expense: 75000,
+        monthly_surplus: 45000,
+        existing_emi_total: 8000,
+        emergency_fund_months: 4.0,
+      },
+      risk: {
+        stated: "aggressive",
+        revealed: "moderate",
+        confidence: 0.82,
+        mismatch: true,
+        risk_capacity: "moderate", // Mock unconfirmed field
+        features_used: {
+          panic_sell_count: 2,
+          avg_days_to_exit_after_drop: 3.25,
+          expense_volatility: 0.3418,
+          emergency_fund_months: 0.65,
+          equity_allocation_pct: 0.5284,
+          budget_overshoot_rate: 0.4167,
+        },
+        evidence: [
+          "Exited equity mutual funds within 3.2 days of a 9.0% market drop (March 2024)",
+          "Liquid emergency buffer covers only 0.65 months of non-discretionary expenses",
+          "Monthly discretionary spending overshoots historical baseline 41.7% of the time"
+        ],
+        model_version: "rr-v1",
+      },
+      peer_cohort: {
+        cohort_id: "COHORT_28_IND_AGGR_MOD",
+        sample_size: 842,
+        similarity_criteria: {
+          age_band: "26–30 yrs",
+          income_band: "₹1,00,000 – ₹1,50,000 / mo",
+          risk_band: "Revealed Moderate",
+          primary_goal: "House Downpayment (5 yr)",
+        },
+        mismatch_metrics: {
+          mismatch_count: 320,
+          mismatch_rate: 0.38,
+          mismatch_pattern_summary: "Stated Aggressive but Behavioral Moderate during market drawdowns",
+        },
+        typical_plan: {
+          preferred_plan_id: "A",
+          preferred_plan_name: "Steady Growth Plan",
+          adoption_rate: 0.68,
+          median_monthly_investment: 32500,
+          typical_allocation: { equity: 0.45, debt: 0.55 },
+          historical_goal_success_rate: 0.89,
+        },
+        customer_benchmarks: {
+          savings_rate_percentile: 0.74,
+          expense_discipline_percentile: 0.62,
+          emergency_buffer_percentile: 0.18,
+          surplus_rank_summary: "Higher monthly surplus than 74% of peers",
+        },
+      }
+    };
+
+    const MOCK_DATA_ALIGNED_C002 = {
+      customer_name: "Priya Patel",
+      profile: {
+        net_worth: 950000,
+        total_assets: 1200000,
+        total_liabilities: 250000,
+        monthly_income: 140000,
+        monthly_expense: 80000,
+        monthly_surplus: 60000,
+        existing_emi_total: 12000,
+        emergency_fund_months: 5.0,
+      },
+      risk: {
+        stated: "moderate",
+        revealed: "moderate",
+        confidence: 0.88,
+        mismatch: false,
+        risk_capacity: "moderate",
+        features_used: {
+          panic_sell_count: 0,
+          avg_days_to_exit_after_drop: 0.0,
+          expense_volatility: 0.125,
+          emergency_fund_months: 5.0,
+          equity_allocation_pct: 0.45,
+          budget_overshoot_rate: 0.1667,
+        },
+        evidence: [
+          "Zero panic sell events recorded during past market corrections",
+          "Robust liquid emergency buffer covering 5.0 months of living expenses",
+          "Stable discretionary spending pattern across 24-month observation window"
+        ],
+        model_version: "rr-v1",
+      },
+      peer_cohort: {
+        cohort_id: "COHORT_30_IND_MOD_MOD",
+        sample_size: 915,
+        similarity_criteria: {
+          age_band: "28–32 yrs",
+          income_band: "₹1,20,000 – ₹1,60,000 / mo",
+          risk_band: "Revealed Moderate",
+          primary_goal: "Retirement & Wealth Growth (10 yr)",
+        },
+        mismatch_metrics: {
+          mismatch_count: 118,
+          mismatch_rate: 0.129,
+          mismatch_pattern_summary: "High alignment between self-reported risk preference and historical asset preservation",
+        },
+        typical_plan: {
+          preferred_plan_id: "A",
+          preferred_plan_name: "Balanced Compounder Plan",
+          adoption_rate: 0.74,
+          median_monthly_investment: 45000,
+          typical_allocation: { equity: 0.50, debt: 0.50 },
+          historical_goal_success_rate: 0.94,
+        },
+        customer_benchmarks: {
+          savings_rate_percentile: 0.81,
+          expense_discipline_percentile: 0.88,
+          emergency_buffer_percentile: 0.76,
+          surplus_rank_summary: "Higher monthly surplus than 81% of peers",
+        },
+      }
+    };
+
+    // --- SCREEN 3.6: RISK INSIGHT COMPONENT ---
+    function RiskInsight({ apiData, isLoading, error, onNavigateToPlans, onNavigateToCohort, onToggleMismatchOverride }) {
+      const [showFeatures, setShowFeatures] = useState(false);
+      const [previewMismatch, setPreviewMismatch] = useState(null);
+
+      if (isLoading) {
+        return (
+          <div className="w-full max-w-6xl mx-auto p-6 md:p-8 space-y-8 animate-pulse font-sans">
+            <div className="space-y-3 pb-6 border-b border-slate-800">
+              <div className="h-4 bg-slate-800 rounded w-48" />
+              <div className="h-8 bg-slate-800 rounded w-80" />
+              <div className="h-4 bg-slate-800/60 rounded w-96" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-44 bg-slate-900 border border-slate-800 rounded-2xl p-5" />
+              ))}
+            </div>
+            <div className="h-36 bg-slate-900 border border-slate-800 rounded-2xl" />
+            <div className="h-64 bg-slate-900 border border-slate-800 rounded-2xl" />
+          </div>
+        );
+      }
+
+      if (error) {
+        return (
+          <div className="min-h-[500px] flex items-center justify-center p-6">
+            <div className="bg-slate-900 border border-red-500/40 rounded-xl p-8 max-w-md w-full text-center shadow-2xl">
+              <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto mb-4 text-red-400">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-slate-100 mb-2">Unable to Load Risk Assessment</h3>
+              <p className="text-sm text-slate-400 mb-6">{error}</p>
+              <button onClick={() => window.location.reload()} className="w-full py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-semibold rounded-lg transition-all">
+                Retry Connection
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      if (!apiData || !apiData.risk) {
+        return (
+          <div className="min-h-[500px] flex items-center justify-center p-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 max-w-md w-full text-center">
+              <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-4 text-slate-400">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-slate-200 mb-1">No Risk Data Found</h3>
+              <p className="text-sm text-slate-400">Please provide a valid customer profile to compute revealed risk metrics.</p>
+            </div>
+          </div>
+        );
+      }
+
+      const { risk, customer_name, profile } = apiData;
+      const capacityValue = risk.risk_capacity || "moderate";
+      const statedValue = risk.stated || "—";
+      const revealedValue = risk.revealed || "—";
+      const confidenceValue = risk.confidence;
+      const evidenceList = Array.isArray(risk.evidence) ? risk.evidence : [];
+      const featuresUsed = risk.features_used || null;
+
+      const isMismatch = previewMismatch !== null ? previewMismatch : Boolean(risk.mismatch);
+
+      const confPct = confidenceValue !== null && confidenceValue !== undefined ? confidenceValue * 100 : null;
+      const isHighConfidence = confPct !== null && confPct >= 75;
+      const isModerateConfidence = confPct !== null && confPct >= 50 && confPct < 75;
+
+      return (
+        <div className="w-full max-w-6xl mx-auto p-4 sm:p-6 md:p-8 space-y-8 font-sans text-slate-100 animate-fadeIn">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-slate-800">
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <span className="px-2.5 py-0.5 text-xs font-semibold tracking-wide uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">
+                  Screen 3.6 · Revealed Risk Engine
+                </span>
+                <span className="text-xs text-slate-400 font-mono">
+                  Model: {risk.model_version || "rr-v1"}
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+                Behavioral Risk Intelligence
+              </h1>
+              <p className="text-sm text-slate-400 mt-1">
+                Empirical synthesis of customer risk capacity, stated preferences, and 24-month behavioral history for <span className="text-slate-200 font-medium">{customer_name || "Customer"}</span>.
+              </p>
+            </div>
+
+            {/* Live Demo Mismatch Toggle */}
+            <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 p-1.5 rounded-xl self-start md:self-auto shadow-inner">
+              <span className="text-xs font-medium text-slate-400 px-2">Demo View:</span>
+              <button
+                onClick={() => {
+                  setPreviewMismatch(true);
+                  if (onToggleMismatchOverride) onToggleMismatchOverride(true);
+                }}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  isMismatch
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-bold'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                }`}
+              >
+                Mismatch State
+              </button>
+              <button
+                onClick={() => {
+                  setPreviewMismatch(false);
+                  if (onToggleMismatchOverride) onToggleMismatchOverride(false);
+                }}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  !isMismatch
+                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                }`}
+              >
+                Aligned State
+              </button>
+            </div>
+          </div>
+
+          {/* 3 Pillars Comparison */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* 1. Capacity */}
+            <div className="bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 transition-all shadow-lg flex flex-col justify-between relative overflow-hidden group">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold tracking-wider uppercase text-slate-400">1. Financial Capacity</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono">
+                    Affordability
+                  </span>
+                </div>
+                <div className="text-2xl font-bold capitalize text-white tracking-tight mb-1">
+                  {capacityValue}
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  "What they can afford" — determined by net worth, debt obligations, and monthly cash surplus.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400 font-mono">
+                <span>Surplus: {profile?.monthly_surplus ? formatRupees(profile.monthly_surplus) + "/mo" : "—"}</span>
+                <span className="text-[10px] text-slate-400 italic">mocked field</span>
+              </div>
+            </div>
+
+            {/* 2. Stated */}
+            <div className="bg-slate-900/90 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 transition-all shadow-lg flex flex-col justify-between relative overflow-hidden group">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold tracking-wider uppercase text-slate-400">2. Stated Preference</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-mono">
+                    Self-Reported
+                  </span>
+                </div>
+                <div className="text-2xl font-bold capitalize text-white tracking-tight mb-1">
+                  {statedValue}
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  "What they said" — self-reported risk appetite captured during customer onboarding questionnaire.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400 font-mono">
+                <span>Questionnaire response</span>
+                <span className="text-emerald-400">Recorded</span>
+              </div>
+            </div>
+
+            {/* 3. Revealed */}
+            <div className={`bg-slate-900/90 border rounded-2xl p-5 transition-all shadow-lg flex flex-col justify-between relative overflow-hidden group ${
+              isMismatch ? 'border-amber-500/40 hover:border-amber-500/60 shadow-amber-950/20' : 'border-emerald-500/40 hover:border-emerald-500/60 shadow-emerald-950/20'
+            }`}>
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold tracking-wider uppercase text-slate-400">3. Revealed Behavior</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded font-mono border ${
+                    isMismatch ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                  }`}>
+                    Empirical ML
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-3 mb-1">
+                  <span className="text-2xl font-bold capitalize text-white tracking-tight">
+                    {revealedValue}
+                  </span>
+                  {isMismatch && (
+                    <span className="text-xs font-semibold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">
+                      Diverges
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  "What their behaviour shows" — derived from actual trade reactions during market drops and spending swings.
+                </p>
+              </div>
+
+              {/* Honest Confidence */}
+              <div className="mt-4 pt-3 border-t border-slate-800/80">
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="text-slate-400 font-medium">Model Prediction Confidence:</span>
+                  <span className={`font-mono font-bold ${
+                    isHighConfidence ? 'text-emerald-400' : isModerateConfidence ? 'text-amber-400' : 'text-slate-400'
+                  }`}>
+                    {formatPercent(confidenceValue, 0)}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-500 rounded-full ${
+                      isHighConfidence ? 'bg-emerald-500' : isModerateConfidence ? 'bg-amber-500' : 'bg-slate-500'
+                    }`}
+                    style={{ width: `${confPct || 0}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1.5 italic">
+                  {isHighConfidence
+                    ? 'High certainty: behavioral patterns are consistently demonstrated across 24 months.'
+                    : isModerateConfidence
+                    ? 'Moderate confidence (61–74%): signal shows noticeable caution during drawdowns.'
+                    : 'Lower confidence: limited stress observations available in historical window.'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* TWO GENUINELY DIFFERENT LAYOUTS */}
+          {isMismatch ? (
+            /* LAYOUT 1: MISMATCH DIAGNOSTIC LAYOUT */
+            <div className="space-y-6 animate-fadeIn">
+              <div className="bg-gradient-to-r from-amber-950/30 via-slate-900 to-slate-900 border border-amber-500/30 rounded-2xl p-6 relative overflow-hidden">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 text-amber-400 mt-1">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                          Behavioral Incongruence Detected
+                        </span>
+                        <span className="text-xs text-slate-400">Risk Differentiator 1</span>
+                      </div>
+                      <h2 className="text-lg font-bold text-white mt-1">
+                        Stated <span className="text-indigo-400 capitalize">{statedValue}</span> vs Revealed <span className="text-amber-400 capitalize">{revealedValue}</span>
+                      </h2>
+                      <p className="text-sm text-slate-300 mt-1 max-w-3xl leading-relaxed">
+                        Customer perceives themselves as <strong className="text-white capitalize">{statedValue}</strong>, but their empirical transaction telemetry demonstrates panic mitigation and cash preservation during stress periods, aligning strictly with <strong className="text-white capitalize">{revealedValue}</strong> risk capacity.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0 bg-slate-950/80 border border-amber-500/20 rounded-xl p-3.5 text-center min-w-[180px]">
+                    <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Suitability Guard</div>
+                    <div className="text-sm font-bold text-amber-400 mt-0.5">Moderate Max Limit</div>
+                    <div className="text-[11px] text-slate-400 mt-1">Protects against panic selloffs</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-amber-400" />
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-slate-200">
+                        Verbatim Behavioral Evidence (Backend Stream)
+                      </h3>
+                    </div>
+                    <span className="text-xs text-slate-400 font-mono">{evidenceList.length} Triggers Logged</span>
+                  </div>
+
+                  <div className="space-y-3 pt-1">
+                    {evidenceList.map((item, idx) => (
+                      <div key={idx} className="bg-slate-950 border border-slate-800/90 hover:border-amber-500/30 rounded-xl p-4 transition-all flex items-start gap-3.5 group">
+                        <div className="w-6 h-6 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0 font-mono text-xs font-bold mt-0.5 border border-amber-500/20 group-hover:bg-amber-500 group-hover:text-slate-950 transition-colors">
+                          {idx + 1}
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm text-slate-200 font-medium leading-relaxed">"{item}"</p>
+                          <p className="text-[11px] text-slate-400">Directly cited by Challenger Agent during plan evaluation.</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-4">
+                  <div>
+                    <div className="flex items-center gap-2 text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">
+                      Planning Implication
+                    </div>
+                    <h4 className="text-base font-bold text-white mb-2">Why We Steer Towards Steady / Balanced</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      When a customer with aggressive stated preferences is given a 70%+ equity portfolio, historical stress models indicate high vulnerability to liquidation during drawdowns.
+                    </p>
+                    <div className="mt-4 p-3 bg-slate-900 rounded-xl border border-slate-800 text-xs space-y-2">
+                      <div className="flex items-center justify-between text-slate-300">
+                        <span>Recommended Plan:</span>
+                        <span className="font-bold text-emerald-400">Plan A (Steady)</span>
+                      </div>
+                      <div className="flex items-center justify-between text-slate-300">
+                        <span>Equity Allocation Cap:</span>
+                        <span className="font-bold text-slate-100">40% – 50%</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="pt-4 border-t border-slate-800/80">
+                    <button onClick={onNavigateToCohort} className="w-full py-2.5 px-3 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-2 border border-slate-700 hover:border-slate-600">
+                      <span>Compare with Anonymous Cohort</span>
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* LAYOUT 2: ALIGNED VALIDATION LAYOUT */
+            <div className="space-y-6 animate-fadeIn">
+              <div className="bg-gradient-to-r from-emerald-950/30 via-slate-900 to-slate-900 border border-emerald-500/30 rounded-2xl p-6 relative overflow-hidden">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-400 mt-1">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                          Profile Fully Aligned
+                        </span>
+                        <span className="text-xs text-slate-400">Risk Harmony Verified</span>
+                      </div>
+                      <h2 className="text-lg font-bold text-white mt-1">
+                        Stated <span className="text-emerald-400 capitalize">{statedValue}</span> matches Revealed <span className="text-emerald-400 capitalize">{revealedValue}</span>
+                      </h2>
+                      <p className="text-sm text-slate-300 mt-1 max-w-3xl leading-relaxed">
+                        Customer self-reported risk tolerance corresponds cleanly with historical portfolio holding discipline, emergency liquidity maintenance, and spending stability.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0 bg-slate-950/80 border border-emerald-500/20 rounded-xl p-3.5 text-center min-w-[180px]">
+                    <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Suitability Check</div>
+                    <div className="text-sm font-bold text-emerald-400 mt-0.5">Validation Passed</div>
+                    <div className="text-[11px] text-slate-400 mt-1">No behavioral friction</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-2">
+                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Drawdown Discipline</div>
+                  <div className="text-xl font-bold text-white">Zero Panic Liquidations</div>
+                  <p className="text-xs text-slate-400 leading-relaxed">Positions were maintained or accumulated during correction cycles.</p>
+                </div>
+                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-2">
+                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Liquidity Resilience</div>
+                  <div className="text-xl font-bold text-white">Buffer Intact</div>
+                  <p className="text-xs text-slate-400 leading-relaxed">Emergency coverage aligns with planned risk budget parameters.</p>
+                </div>
+                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-2">
+                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Cohort Benchmark</div>
+                  <div className="text-xl font-bold text-emerald-400">Top 15% Discipline</div>
+                  <p className="text-xs text-slate-400 leading-relaxed">Displays higher variance absorption than standard peer average.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* COLLAPSIBLE FEATURES USED */}
+          <div className="border border-slate-800 bg-slate-950/60 rounded-2xl overflow-hidden transition-all">
+            <button
+              onClick={() => setShowFeatures(!showFeatures)}
+              className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-slate-900/60 active:bg-slate-900 transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-emerald-400 transition-colors">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div>
+                  <span className="text-sm font-semibold text-slate-200 group-hover:text-white transition-colors">
+                    Model Feature Telemetry (§3a Matrix)
+                  </span>
+                  <span className="text-xs text-slate-400 block sm:inline sm:ml-2">
+                    (Deterministic values passed from features.py to Revealed Risk ML)
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+                <span>{showFeatures ? "Hide Diagnostics" : "Expand Metrics"}</span>
+                <svg className={`w-4 h-4 transition-transform duration-200 ${showFeatures ? 'rotate-180 text-emerald-400' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </button>
+
+            {showFeatures && (
+              <div className="px-6 pb-6 pt-2 border-t border-slate-800/80 bg-slate-900/40 animate-fadeIn">
+                {featuresUsed ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-3">
+                    <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                      <div className="text-[11px] text-slate-400 uppercase tracking-wider">Panic Sells</div>
+                      <div className="text-lg font-mono font-bold text-slate-100 mt-1">{formatMetric(featuresUsed.panic_sell_count)}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Drawdown selloffs</div>
+                    </div>
+                    <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                      <div className="text-[11px] text-slate-400 uppercase tracking-wider">Days to Exit</div>
+                      <div className="text-lg font-mono font-bold text-slate-100 mt-1">{formatMetric(featuresUsed.avg_days_to_exit_after_drop, "days")}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Reaction speed</div>
+                    </div>
+                    <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                      <div className="text-[11px] text-slate-400 uppercase tracking-wider">Expense Volatility</div>
+                      <div className="text-lg font-mono font-bold text-slate-100 mt-1">{formatMetric(featuresUsed.expense_volatility)}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Std / Mean monthly</div>
+                    </div>
+                    <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                      <div className="text-[11px] text-slate-400 uppercase tracking-wider">Emergency Fund</div>
+                      <div className="text-lg font-mono font-bold text-slate-100 mt-1">{formatMetric(featuresUsed.emergency_fund_months, "mo")}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Expense coverage</div>
+                    </div>
+                    <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                      <div className="text-[11px] text-slate-400 uppercase tracking-wider">Equity Asset Ratio</div>
+                      <div className="text-lg font-mono font-bold text-slate-100 mt-1">{formatPercent(featuresUsed.equity_allocation_pct, 1)}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Equity MF / Total</div>
+                    </div>
+                    <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                      <div className="text-[11px] text-slate-400 uppercase tracking-wider">Budget Overshoot</div>
+                      <div className="text-lg font-mono font-bold text-slate-100 mt-1">{formatPercent(featuresUsed.budget_overshoot_rate, 1)}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Months over mean</div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic py-2">Features vector object not present in payload.</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Primary Action Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-800">
+            <button
+              onClick={onNavigateToCohort}
+              className="w-full sm:w-auto px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-700 text-slate-200 text-sm font-semibold border border-slate-800 hover:border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <span>View Peer Cohort (Screen 3.7)</span>
+            </button>
+
+            <button
+              onClick={onNavigateToPlans}
+              className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 text-sm font-bold shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+            >
+              <span>Continue to Personalized Plans</span>
+              <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // --- SCREEN 3.7: SIMILAR PROFILES COMPONENT ---
+    function SimilarProfiles({ cohortData, apiData, isLoading, error, onNavigateToRiskInsight, onNavigateToPlans }) {
+      if (isLoading) {
+        return (
+          <div className="w-full max-w-6xl mx-auto p-6 md:p-8 space-y-8 animate-pulse font-sans">
+            <div className="space-y-3 pb-6 border-b border-slate-800">
+              <div className="h-4 bg-slate-800 rounded w-48" />
+              <div className="h-8 bg-slate-800 rounded w-80" />
+              <div className="h-4 bg-slate-800/60 rounded w-96" />
+            </div>
+            <div className="h-28 bg-slate-900 border border-slate-800 rounded-2xl" />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-7 h-96 bg-slate-900 border border-slate-800 rounded-2xl" />
+              <div className="lg:col-span-5 h-96 bg-slate-900 border border-slate-800 rounded-2xl" />
+            </div>
+          </div>
+        );
+      }
+
+      if (error) {
+        return (
+          <div className="min-h-[500px] flex items-center justify-center p-6 font-sans">
+            <div className="bg-slate-900 border border-red-500/40 rounded-xl p-8 max-w-md w-full text-center shadow-2xl">
+              <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto mb-4 text-red-400">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-slate-100 mb-2">Unable to Retrieve Peer Cohort</h3>
+              <p className="text-sm text-slate-400 mb-6">{error}</p>
+              <button onClick={onNavigateToRiskInsight} className="w-full py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-semibold rounded-lg transition-all">
+                Return to Risk Insight
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      const rawCohort = cohortData?.peer_cohort || apiData?.peer_cohort || null;
+
+      if (!rawCohort) {
+        return (
+          <div className="min-h-[500px] flex items-center justify-center p-6 font-sans">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 max-w-md w-full text-center">
+              <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-4 text-slate-400">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-slate-200 mb-1">No Peer Cohort Data Available</h3>
+              <p className="text-sm text-slate-400 mb-4">No statistical peer group matched the selected customer criteria.</p>
+              <button onClick={onNavigateToRiskInsight} className="py-2 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium rounded-lg transition-all">
+                ← Return to Risk Insight
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      const { sample_size, similarity_criteria, mismatch_metrics, typical_plan, customer_benchmarks } = rawCohort;
+
+      return (
+        <div className="w-full max-w-6xl mx-auto p-4 sm:p-6 md:p-8 space-y-8 font-sans text-slate-100 animate-fadeIn">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-slate-800">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <button onClick={onNavigateToRiskInsight} className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 hover:underline transition-all group">
+                  <svg className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  <span>Back to Risk Insight (Screen 3.6)</span>
+                </button>
+                <span className="text-slate-600">·</span>
+                <span className="px-2 py-0.5 text-[11px] font-semibold uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded">
+                  Screen 3.7 · Cohort Intelligence
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+                Anonymous Peer Cohort Comparison
+              </h1>
+              <p className="text-sm text-slate-400 mt-1">
+                Aggregated statistical insights from <strong className="text-slate-200 font-semibold">{formatNumber(sample_size)} verified bank customers</strong> sharing identical profile attributes.
+              </p>
+            </div>
+
+            {/* Privacy Seal */}
+            <div className="flex items-center gap-3 bg-slate-900/90 border border-emerald-500/30 px-4 py-2.5 rounded-xl shadow-lg shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-200 uppercase tracking-wider">Zero-PII Privacy Guarantee</div>
+                <div className="text-[11px] text-slate-400">Differential Privacy Applied · Cohort Stats Only</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Matching Criteria Strip */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-lg">
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+              <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+              </svg>
+              Cohort Definition Criteria ({formatNumber(sample_size)} Matches)
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/80">
+                <div className="text-[11px] text-slate-400">Age Bracket</div>
+                <div className="text-sm font-bold text-white mt-0.5">{similarity_criteria?.age_band || "—"}</div>
+              </div>
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/80">
+                <div className="text-[11px] text-slate-400">Monthly Income Band</div>
+                <div className="text-sm font-bold text-white mt-0.5">{similarity_criteria?.income_band || "—"}</div>
+              </div>
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/80">
+                <div className="text-[11px] text-slate-400">Revealed Risk Band</div>
+                <div className="text-sm font-bold text-emerald-400 mt-0.5">{similarity_criteria?.risk_band || "—"}</div>
+              </div>
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/80">
+                <div className="text-[11px] text-slate-400">Financial Goal Category</div>
+                <div className="text-sm font-bold text-indigo-300 mt-0.5 truncate" title={similarity_criteria?.primary_goal}>
+                  {similarity_criteria?.primary_goal || "—"}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Benchmarking Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left 7 Cols: Typical Plan */}
+            <div className="lg:col-span-7 space-y-6">
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-5">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Cohort Consensus</span>
+                    <h2 className="text-lg font-bold text-white mt-0.5">Typical Plan Selection in this Group</h2>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs text-slate-400">Adoption Rate</span>
+                    <div className="text-base font-mono font-bold text-emerald-400">
+                      {formatPercent(typical_plan?.adoption_rate, 0)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800/90">
+                    <div className="text-xs text-slate-400">Most Chosen Plan</div>
+                    <div className="text-base font-bold text-white mt-1">
+                      {typical_plan?.preferred_plan_name || "—"} ({typical_plan?.preferred_plan_id || "A"})
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-1">Balanced equity-debt ratio</div>
+                  </div>
+
+                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800/90">
+                    <div className="text-xs text-slate-400">Median Monthly SIP</div>
+                    <div className="text-base font-bold text-white mt-1">
+                      {formatRupees(typical_plan?.median_monthly_investment)}/mo
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-1">Typical commitment</div>
+                  </div>
+                </div>
+
+                {/* Allocation bar */}
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800/90 space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-300">Cohort Asset Allocation Mix</span>
+                    <span className="text-slate-400 font-mono">
+                      Goal Completion: <strong className="text-emerald-400">{formatPercent(typical_plan?.historical_goal_success_rate, 0)}</strong>
+                    </span>
+                  </div>
+
+                  <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden flex">
+                    <div
+                      className="h-full bg-indigo-500"
+                      style={{ width: `${(typical_plan?.typical_allocation?.equity || 0.45) * 100}%` }}
+                    />
+                    <div
+                      className="h-full bg-emerald-500"
+                      style={{ width: `${(typical_plan?.typical_allocation?.debt || 0.55) * 100}%` }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-slate-400 font-mono pt-1">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                      <span>Equity: {formatPercent(typical_plan?.typical_allocation?.equity, 0)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      <span>Debt / Fixed: {formatPercent(typical_plan?.typical_allocation?.debt, 0)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mismatch Frequency */}
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-400">Behavioral Frequency</span>
+                  <span className="text-xs text-slate-400 font-mono">
+                    {formatNumber(mismatch_metrics?.mismatch_count)} of {formatNumber(sample_size)} Peers
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-white">
+                  {formatPercent(mismatch_metrics?.mismatch_rate, 0)} of similar peers also exhibit a Risk Mismatch
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  {mismatch_metrics?.mismatch_pattern_summary || "Many customers self-report aggressive risk tolerance, but historical trade reactions show capital preservation behavior."}
+                </p>
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-300">
+                  💡 <strong>Advisor Note:</strong> This divergence is extremely common in young professionals before experiencing their first major drawdown.
+                </div>
+              </div>
+            </div>
+
+            {/* Right 5 Cols: Benchmarks */}
+            <div className="lg:col-span-5 space-y-6">
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-6">
+                <div className="border-b border-slate-800 pb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Customer Relative Standing</span>
+                  <h2 className="text-lg font-bold text-white mt-0.5">Where You Sit vs Peer Group</h2>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-200">Monthly Savings Surplus</span>
+                    <span className="font-mono font-bold text-emerald-400">
+                      {formatPercent(customer_benchmarks?.savings_rate_percentile, 0)} Percentile
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${(customer_benchmarks?.savings_rate_percentile || 0.74) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-400 italic">
+                    {customer_benchmarks?.surplus_rank_summary || "Higher savings surplus than 74% of peers"}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-200">Expense Stability / Discipline</span>
+                    <span className="font-mono font-bold text-indigo-400">
+                      {formatPercent(customer_benchmarks?.expense_discipline_percentile, 0)} Percentile
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-indigo-500 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${(customer_benchmarks?.expense_discipline_percentile || 0.62) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-400 italic">
+                    Monthly spending predictability is higher than 62% of the peer cohort.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-200">Emergency Fund Runway</span>
+                    <span className="font-mono font-bold text-amber-400">
+                      {formatPercent(customer_benchmarks?.emergency_buffer_percentile, 0)} Percentile
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-amber-500 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${(customer_benchmarks?.emergency_buffer_percentile || 0.18) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-400 italic">
+                    Lower emergency buffer than 82% of cohort — building liquid reserves is recommended.
+                  </p>
+                </div>
+
+                <div className="pt-4 border-t border-slate-800 space-y-3">
+                  <button
+                    onClick={onNavigateToPlans}
+                    className="w-full py-3.5 px-4 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 font-bold text-sm rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 group cursor-pointer"
+                  >
+                    <span>Proceed to Goal Recommendations</span>
+                    <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </button>
+
+                  <button
+                    onClick={onNavigateToRiskInsight}
+                    className="w-full py-2.5 px-4 bg-slate-950 hover:bg-slate-800 active:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-800 transition-all cursor-pointer"
+                  >
+                    ← Return to Risk Insight
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- MAIN APP DEMO HARNESS ---
+    function App() {
+      const [activeScreen, setActiveScreen] = useState('3.6');
+      const [selectedPersona, setSelectedPersona] = useState('C001');
+      const [simulatedState, setSimulatedState] = useState('success');
+      const [mismatchOverride, setMismatchOverride] = useState(null);
+
+      let currentApiData = null;
+      if (simulatedState === 'success') {
+        if (selectedPersona === 'C001') {
+          currentApiData = JSON.parse(JSON.stringify(MOCK_DATA_MISMATCH_C001));
+        } else if (selectedPersona === 'C002') {
+          currentApiData = JSON.parse(JSON.stringify(MOCK_DATA_ALIGNED_C002));
+        } else if (selectedPersona === 'NULLS') {
+          currentApiData = {
+            customer_name: "Null Field Test Persona",
+            profile: { net_worth: null, monthly_income: null, monthly_expense: null, monthly_surplus: null, emergency_fund_months: null },
+            risk: {
+              stated: null,
+              revealed: null,
+              confidence: null,
+              mismatch: true,
+              risk_capacity: null,
+              features_used: { panic_sell_count: null, avg_days_to_exit_after_drop: null, expense_volatility: null, emergency_fund_months: null, equity_allocation_pct: null, budget_overshoot_rate: null },
+              evidence: ["Null/Edge case test: missing fields render strictly as '—' rather than 0 or empty string."],
+              model_version: "rr-null-test",
+            },
+            peer_cohort: null,
+          };
+        }
+
+        if (currentApiData && mismatchOverride !== null && currentApiData.risk) {
+          currentApiData.risk.mismatch = mismatchOverride;
+        }
+      }
+
+      const isLoading = simulatedState === 'loading';
+      const isError = simulatedState === 'error' ? "Simulated API gateway timeout (504)" : null;
+
+      return (
+        <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
+          <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center font-black text-slate-950 text-lg shadow-lg shadow-emerald-500/20">
+                  ₹
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-base text-white tracking-tight">FinancePlanner</span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      Varada's Screens
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">Team Hackathon Demo · Branch: feature/features</p>
+                </div>
+              </div>
+
+              <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1 shadow-inner">
+                <button
+                  onClick={() => setActiveScreen('3.6')}
+                  className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeScreen === '3.6'
+                      ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                  }`}
+                >
+                  <span>Screen 3.6: Risk Insight</span>
+                  <span className={`text-[9px] px-1 py-0.2 rounded font-mono ${activeScreen === '3.6' ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
+                    STAR
+                  </span>
+                </button>
+                <button
+                  onClick={() => setActiveScreen('3.7')}
+                  className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeScreen === '3.7'
+                      ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                  }`}
+                >
+                  <span>Screen 3.7: Similar Profiles</span>
+                  <span className={`text-[9px] px-1 py-0.2 rounded font-mono ${activeScreen === '3.7' ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
+                    COHORT
+                  </span>
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold">Persona:</span>
+                  <select
+                    value={selectedPersona}
+                    onChange={(e) => {
+                      setSelectedPersona(e.target.value);
+                      setMismatchOverride(null);
+                      if (simulatedState === 'empty') setSimulatedState('success');
+                    }}
+                    className="bg-transparent text-xs text-slate-200 font-medium focus:outline-none cursor-pointer"
+                  >
+                    <option value="C001" className="bg-slate-900 text-slate-200">C001 (Rahul - Mismatch)</option>
+                    <option value="C002" className="bg-slate-900 text-slate-200">C002 (Priya - Aligned)</option>
+                    <option value="NULLS" className="bg-slate-900 text-slate-200">Nulls / Missing Fields Test</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1">
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold">State:</span>
+                  <select
+                    value={simulatedState}
+                    onChange={(e) => setSimulatedState(e.target.value)}
+                    className="bg-transparent text-xs text-slate-200 font-medium focus:outline-none cursor-pointer"
+                  >
+                    <option value="success" className="bg-slate-900 text-slate-200">Normal (Success)</option>
+                    <option value="loading" className="bg-slate-900 text-slate-200">Loading Skeleton</option>
+                    <option value="error" className="bg-slate-900 text-slate-200">Error State</option>
+                    <option value="empty" className="bg-slate-900 text-slate-200">Empty State</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-1 py-6 px-3 sm:px-6">
+            {activeScreen === '3.6' ? (
+              <RiskInsight
+                apiData={currentApiData}
+                isLoading={isLoading}
+                error={isError}
+                onNavigateToPlans={() => alert("Navigating to Screen 4 (Personalized Plan Recommendations)...")}
+                onNavigateToCohort={() => setActiveScreen('3.7')}
+                onToggleMismatchOverride={(overrideVal) => setMismatchOverride(overrideVal)}
+              />
+            ) : (
+              <SimilarProfiles
+                cohortData={currentApiData}
+                apiData={currentApiData}
+                isLoading={isLoading}
+                error={isError}
+                onNavigateToRiskInsight={() => setActiveScreen('3.6')}
+                onNavigateToPlans={() => alert("Navigating to Screen 4 (Personalized Plan Recommendations)...")}
+              />
+            )}
+          </main>
+
+          <footer className="border-t border-slate-900 bg-slate-950 py-4 text-center text-xs text-slate-400">
+            Finance-Planner Hackathon UI · Single-file React Components · Pure Display Formatting (Zero Calculations in Frontend)
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

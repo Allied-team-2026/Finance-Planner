@@ -1,0 +1,35 @@
+{
+  "_comment": "NOTE: Field names in peer_cohort are self-authored mocks for Screen 3.7 and pending group confirmation.",
+  "peer_cohort": {
+    "cohort_id": "COHORT_28_IND_AGGR_MOD",
+    "sample_size": 842,
+    "similarity_criteria": {
+      "age_band": "26–30 yrs",
+      "income_band": "₹1,00,000 – ₹1,50,000 / mo",
+      "risk_band": "Revealed Moderate",
+      "primary_goal": "House Downpayment (5 yr)"
+    },
+    "mismatch_metrics": {
+      "mismatch_count": 320,
+      "mismatch_rate": 0.38,
+      "mismatch_pattern_summary": "Stated Aggressive but Behavioral Moderate during market drawdowns"
+    },
+    "typical_plan": {
+      "preferred_plan_id": "A",
+      "preferred_plan_name": "Steady Growth Plan",
+      "adoption_rate": 0.68,
+      "median_monthly_investment": 32500,
+      "typical_allocation": {
+        "equity": 0.45,
+        "debt": 0.55
+      },
+      "historical_goal_success_rate": 0.89
+    },
+    "customer_benchmarks": {
+      "savings_rate_percentile": 0.74,
+      "expense_discipline_percentile": 0.62,
+      "emergency_buffer_percentile": 0.18,
+      "surplus_rank_summary": "Higher monthly surplus than 74% of peers"
+    }
+  }
+}
