@@ -447,25 +447,34 @@ def get_inferred_units(path_list):
 def validate_prose_numbers(prose, numbers_map):
     import re
     import math
-    # Find all numeric substrings
-    matches = re.findall(r'-?\d+(?:,\d{3})*(?:\.\d+)?', prose)
-    for match in matches:
+    matches = re.finditer(r'-?\d+(?:,\d{3})*(?:\.\d+)?', prose)
+    for match_obj in matches:
+        match = match_obj.group(0)
         val = float(match.replace(',', ''))
+        start_idx = match_obj.start()
+        end_idx = match_obj.end()
         
+        # Check for structural percentile labels
+        context_start = max(0, start_idx - 5)
+        context_end = min(len(prose), end_idx + 15)
+        context = prose[context_start:context_end].lower()
+        
+        if val == 10.0 and ("10th percentile" in context or "p10" in context or "10-90" in context or "10‑90" in context):
+            # Verify p10 exists in payload
+            if any("p10" in p.lower() for paths in numbers_map.values() for p in paths):
+                continue
+        if val == 90.0 and ("90th percentile" in context or "p90" in context or "10-90" in context or "10‑90" in context):
+            if any("p90" in p.lower() for paths in numbers_map.values() for p in paths):
+                continue
+
         # Check if percentage
         is_percentage_format = False
-        match_idx = prose.find(match)
-        if match_idx != -1:
-            # Look ahead for '%'
-            if match_idx + len(match) < len(prose) and prose[match_idx + len(match):match_idx + len(match) + 1] == '%':
-                is_percentage_format = True
-            # Look behind for money symbols
-            if match_idx > 0 and prose[match_idx - 1] in ['₹', '$']:
-                is_money_format = True
-            else:
-                is_money_format = False
-        else:
-            is_money_format = False
+        if end_idx < len(prose) and prose[end_idx] == '%':
+            is_percentage_format = True
+        
+        is_money_format = False
+        if start_idx > 0 and prose[start_idx - 1] in ['₹', '$']:
+            is_money_format = True
             
         def get_paths(v):
             for a, paths in numbers_map.items():
@@ -508,14 +517,40 @@ def explain(bundle):
     payload = build_explanation_payload(bundle)
     
     system_prompt = """You are a financial explanation agent.
-Your task is to explain the financial plans provided in the payload.
+Your task is to explain the financial plans provided in the payload in human-readable language.
+
+STEP 1
+Create exactly one explanation object for each plan in the input (A, B, C).
+The output `plans_text` MUST contain exactly the same plan IDs as the input plans, in the same order. Missing a plan is an error.
+
+STEP 2
+For each plan, explain ONLY the most decision-relevant facts:
+- monthly investment, allocation, projected corpus, goal/feasibility, Monte Carlo success probability
+- P10/P90 range when useful, stress result when useful
+- one or two meaningful pros, one or two meaningful cons
+
+Tell the model to prefer concise explanations. For each plan:
+- 1 concise headline
+- 2 to 4 sentences in body
+- 1 to 3 pros
+- 1 to 3 cons
+
+Avoid repeating the same numbers across every sentence. Do not mention irrelevant internal fields. Keep it concise and readable. Do NOT dump every numeric field.
+
+STEP 3
+Add `goal_priority_note`: Explain the priority-1 goal using only supplied information.
+
+STEP 4
+Add `mismatch_note`: Explain stated vs revealed risk and relevant evidence.
+
+STEP 5
+Add `peer_cohort_note`: ONLY IF the payload contains a non-null peer cohort, explain the peer cohort as context, NOT as a recommendation. Do NOT invent peer data. If peer cohort is null, return exactly "No sufficiently large peer cohort was available."
+
+RULES
 Use ONLY numbers present in the supplied payload. Never invent or calculate numbers.
 Do not calculate percentages from decimals, simulation counts from probabilities, shortfalls, investment deltas, savings rates, breaking probabilities, or corpus values. Quote supplied numbers exactly as they appear in the payload.
 Never identify the customer.
-Do not present peer statistics as recommendations.
-Explain risk mismatch when present.
-Explain affordability and stress-test outcomes.
-In the "numbers_used" array, list ONLY the exact numbers you actually cited in your explanation text. Do not list every number from the payload.
+In the "numbers_used" array, list ONLY the exact numbers you actually cited in your explanation text. Do not list every number from the payload. Do not put structural labels such as 10th percentile, 90th percentile, p10, or p90 into numbers_used.
 """
 
     model_name = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
@@ -540,9 +575,10 @@ In the "numbers_used" array, list ONLY the exact numbers you actually cited in y
             },
             "goal_priority_note": {"type": "string"},
             "mismatch_note": {"type": "string"},
+            "peer_cohort_note": {"type": "string"},
             "numbers_used": {"type": "array", "items": {"type": "number"}}
         },
-        "required": ["plans_text", "goal_priority_note", "mismatch_note", "numbers_used"],
+        "required": ["plans_text", "goal_priority_note", "mismatch_note", "peer_cohort_note", "numbers_used"],
         "additionalProperties": False
     }
 
@@ -561,7 +597,8 @@ In the "numbers_used" array, list ONLY the exact numbers you actually cited in y
                 "schema": schema
             }
         },
-        temperature=0.0
+        temperature=0.0,
+        max_tokens=4000
     )
     
     result = json.loads(response.choices[0].message.content)
@@ -569,6 +606,13 @@ In the "numbers_used" array, list ONLY the exact numbers you actually cited in y
     # 1. Structure validation
     if "plans_text" not in result or not isinstance(result["plans_text"], list):
         raise ValueError("Missing or invalid 'plans_text'")
+        
+    input_plan_ids = [p.get("plan_id") for p in payload.get("plans", [])]
+    output_plan_ids = [pt.get("plan_id") for pt in result["plans_text"]]
+    
+    if input_plan_ids != output_plan_ids:
+        raise ValueError(f"Plan ID mismatch. Expected exactly {input_plan_ids}, but got {output_plan_ids}")
+        
     for pt in result["plans_text"]:
         for f in ["plan_id", "headline", "body", "pros", "cons"]:
             if f not in pt:

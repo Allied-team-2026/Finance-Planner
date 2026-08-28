@@ -90,11 +90,12 @@ def mock_groq_client(content, assert_model=None, assert_schema=False):
 def test_model_is_configurable_and_uses_schema(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "fake")
     monkeypatch.setenv("GROQ_MODEL", "custom-model-8b")
-    bundle = {"peer_cohort": None, "profile": {"a": 100}}
+    bundle = {"peer_cohort": None, "plans": [{"plan_id": "A"}], "profile": {"a": 100}}
     valid_out = json.dumps({
         "plans_text": [{"plan_id": "A", "headline": "h", "body": "b", "pros": ["p"], "cons": ["c"]}],
         "goal_priority_note": "note",
         "mismatch_note": "note",
+        "peer_cohort_note": "note",
         "numbers_used": [100.0]
     })
     
@@ -105,11 +106,12 @@ def test_model_is_configurable_and_uses_schema(monkeypatch):
 def test_default_model_uses_schema(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "fake")
     monkeypatch.delenv("GROQ_MODEL", raising=False)
-    bundle = {"peer_cohort": None, "profile": {"a": 100}}
+    bundle = {"peer_cohort": None, "plans": [{"plan_id": "A"}], "profile": {"a": 100}}
     valid_out = json.dumps({
         "plans_text": [{"plan_id": "A", "headline": "h", "body": "b", "pros": ["p"], "cons": ["c"]}],
         "goal_priority_note": "note",
         "mismatch_note": "note",
+        "peer_cohort_note": "note",
         "numbers_used": [100.0]
     })
     
@@ -119,12 +121,13 @@ def test_default_model_uses_schema(monkeypatch):
 
 def test_explain_validates_schema(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "fake")
-    bundle = {"peer_cohort": None, "profile": {"a": 100}}
+    bundle = {"peer_cohort": None, "plans": [{"plan_id": "A"}], "profile": {"a": 100}}
     
     invalid_struct = json.dumps({
         "plans_text": [{"plan_id": "A", "headline": "h", "pros": [], "cons": []}],
         "goal_priority_note": "note",
         "mismatch_note": "note",
+        "peer_cohort_note": "note",
         "numbers_used": [100.0]
     })
     monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(invalid_struct))
@@ -133,12 +136,13 @@ def test_explain_validates_schema(monkeypatch):
 
 def test_explain_rejects_unsupported_numbers_used(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "fake")
-    bundle = {"peer_cohort": None, "profile": {"a": 100}}
+    bundle = {"peer_cohort": None, "plans": [{"plan_id": "A"}], "profile": {"a": 100}}
     
     out = json.dumps({
         "plans_text": [{"plan_id": "A", "headline": "h", "body": "b", "pros": [], "cons": []}],
         "goal_priority_note": "note",
         "mismatch_note": "note",
+        "peer_cohort_note": "note",
         "numbers_used": [100.0, 200.0]
     })
     
@@ -148,12 +152,13 @@ def test_explain_rejects_unsupported_numbers_used(monkeypatch):
 
 def test_explain_rejects_unsupported_prose_number(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "fake")
-    bundle = {"peer_cohort": None, "profile": {"a": 100}}
+    bundle = {"peer_cohort": None, "plans": [{"plan_id": "A"}], "profile": {"a": 100}}
     
     out = json.dumps({
         "plans_text": [{"plan_id": "A", "headline": "h", "body": "It costs 250 dollars", "pros": [], "cons": []}],
         "goal_priority_note": "note",
         "mismatch_note": "note",
+        "peer_cohort_note": "note",
         "numbers_used": [100.0]
     })
     
@@ -163,12 +168,13 @@ def test_explain_rejects_unsupported_prose_number(monkeypatch):
 
 def test_valid_formatting_variant_is_accepted(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "fake")
-    bundle = {"peer_cohort": None, "profile": {"rate": 0.7376, "cost": 2500000}}
+    bundle = {"peer_cohort": None, "plans": [{"plan_id": "A"}], "profile": {"rate": 0.7376, "cost": 2500000}}
     
     out = json.dumps({
         "plans_text": [{"plan_id": "A", "headline": "Rate 73.76%", "body": "Cost 2,500,000", "pros": [], "cons": []}],
         "goal_priority_note": "note",
         "mismatch_note": "note",
+        "peer_cohort_note": "note",
         "numbers_used": [0.7376, 2500000]
     })
     
@@ -183,12 +189,13 @@ def test_explain_rejects_semantic_mismatch(monkeypatch):
     """
     monkeypatch.setenv("GROQ_API_KEY", "fake")
     # Payload has years=5, no money values equal to 5.
-    bundle = {"peer_cohort": None, "goals": [{"years": 5}], "comparisons": {"plan_count": 5}}
+    bundle = {"peer_cohort": None, "plans": [{"plan_id": "A"}], "goals": [{"years": 5}], "comparisons": {"plan_count": 5}}
     
     out = json.dumps({
         "plans_text": [{"plan_id": "A", "headline": "You have ₹5", "body": "b", "pros": [], "cons": []}],
         "goal_priority_note": "note",
         "mismatch_note": "note",
+        "peer_cohort_note": "note",
         "numbers_used": [5.0]
     })
     
@@ -198,12 +205,13 @@ def test_explain_rejects_semantic_mismatch(monkeypatch):
 
 def test_explain_rejects_privacy_leaks(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "fake")
-    bundle = {"peer_cohort": None, "profile": {"a": 100}}
+    bundle = {"peer_cohort": None, "plans": [{"plan_id": "A"}], "profile": {"a": 100}}
     
     out = json.dumps({
         "plans_text": [{"plan_id": "A", "headline": "h", "body": "C001 is the user", "pros": [], "cons": []}],
         "goal_priority_note": "note",
         "mismatch_note": "note",
+        "peer_cohort_note": "note",
         "numbers_used": [100.0]
     })
     
@@ -283,3 +291,38 @@ def test_extract_embedded_numbers():
     
     with pytest.raises(ValueError, match="Unsupported numeric claim in prose: 0.88"):
         validate_prose_numbers("rate of 0.88", numbers_map)
+
+def test_validate_structural_percentile():
+    from agents.explanation import validate_prose_numbers
+    import pytest
+    numbers_map = {
+        1855503: ["payload.plans[0].p10_corpus"],
+        4412578: ["payload.plans[0].p90_corpus"],
+        0.7376: ["payload.plans[0].success_probability"],
+        2500000: ["payload.plans[0].corpus"],
+        0.42: ["payload.risk.evidence[0]"],
+        0.5: ["payload.risk.evidence[1]"]
+    }
+    
+    # ACCEPT: Structural percentiles
+    validate_prose_numbers("At the 10th percentile, the corpus is 1855503", numbers_map)
+    validate_prose_numbers("At the 90th percentile, the corpus is 4412578", numbers_map)
+    validate_prose_numbers("The p10 corpus is 1855503", numbers_map)
+    validate_prose_numbers("The p90 corpus is 4412578", numbers_map)
+    
+    # ACCEPT: Existing formats
+    validate_prose_numbers("73.76%", numbers_map)
+    validate_prose_numbers("2,500,000", numbers_map)
+    validate_prose_numbers("budget overshoot rate of 0.42.", numbers_map)
+    validate_prose_numbers("equity allocation of 50%", numbers_map)
+    
+    # REJECT: Fabricated numbers using 10/90
+    with pytest.raises(ValueError, match="Unsupported numeric claim in prose: 10"):
+        validate_prose_numbers("You have ₹10", numbers_map)
+    with pytest.raises(ValueError, match="Unsupported numeric claim in prose: 10"):
+        validate_prose_numbers("You save 10%", numbers_map)
+    with pytest.raises(ValueError, match="Unsupported numeric claim in prose: 10"):
+        validate_prose_numbers("The goal is 10 years", numbers_map)
+        
+    with pytest.raises(ValueError, match="Unsupported numeric claim in prose: 90"):
+        validate_prose_numbers("You have ₹90", numbers_map)
