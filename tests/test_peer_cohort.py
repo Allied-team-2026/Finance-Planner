@@ -457,18 +457,12 @@ def test_run_real_c001():
     from engines.profile import build_profile
     from engines.features import extract
     from models.risk_model import predict
+    import json
+    from pathlib import Path
     
     customers = generate_dataset(1000, seed=42)
-    # The true C001 customer from the prompt specification
-    c001_raw = {
-        "customer_id": "C001",
-        "name": "Jane Doe",
-        "age": 28,
-        "monthly_income": 120000,
-        "assets": {"savings_account": 30000}, # Corrected savings per JSON_CONTRACT.md 
-        "stated_risk": "aggressive",
-        "goals": [{"name": "house_downpayment", "priority": 1, "target_amount": 2500000, "years": 5}]
-    }
+    # The true C001 customer from the mocks
+    c001_raw = json.loads(Path("mocks/customer_C001.json").read_text())
     # For a real run we need valid profile and risk inputs:
     c001_prof = build_profile(c001_raw)
     features = extract(c001_raw, c001_prof)
@@ -481,6 +475,7 @@ def test_run_real_c001():
     assert "stated_risk" not in result["matched_on"]  # Fallback dropped stated_risk in earlier test
     assert result["mismatch_rate"] >= 0.0
     assert result["most_common_plan_label"] in ["Steady", "Balanced", "Growth"]
+    assert result["customer_savings_rate"] == 0.375
     
 def test_run_determinism():
     from engines.peer_cohort import run
