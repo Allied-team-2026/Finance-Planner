@@ -37,7 +37,9 @@ def stages():
 
 def test_bundle_matches_the_mock():
     """Section 7 built from the engine mocks equals mocks/plan_bundle.json."""
-    assert stages()["bundle"] == load_mock("plan_bundle.json")
+    expected = load_mock("plan_bundle.json")
+    expected["peer_cohort"] = load_mock("peer_cohort_out.json")
+    assert stages()["bundle"] == expected
 
 
 def test_response_matches_the_mock():
@@ -392,3 +394,80 @@ if __name__ == "__main__":
             print(f"FAIL  {name}: {type(e).__name__}: {e}")
     print(f"\n{failed} failed" if failed else "\nall tests pass")
     sys.exit(1 if failed else 0)
+import os
+import json
+import pytest
+from orchestrator import pipeline
+from orchestrator.pipeline import load_mock, make_challenge
+
+def test_make_challenge_integration():
+    """Verify that make_challenge correctly integrates explanation, verification, and chosen_plan_id."""
+    was_real = "challenge" in pipeline.REAL_ENGINES
+    pipeline.REAL_ENGINES.discard("challenge")
+    try:
+        # We need to spy on run("challenge", ...)
+        original_run = pipeline.run
+        captured_args = []
+        
+        def spy_run(stage, *args):
+            if stage == "challenge":
+                captured_args.extend(args)
+                return load_mock("challenge_out.json")
+            return original_run(stage, *args)
+            
+        pipeline.run = spy_run
+        try:
+            result = make_challenge("C001", "B")
+            assert len(captured_args) == 4
+            bundle, expl, verif, plan_id = captured_args
+            assert plan_id == "B"
+            assert "monthly_surplus" in bundle["profile"]
+            assert "plans_text" in expl
+            assert "status" in verif
+            
+            # test privacy on final output (only internal fields like ground_truth_risk are excluded)
+            result_str = json.dumps(result)
+            assert "ground_truth_risk" not in result_str
+        finally:
+            pipeline.run = original_run
+    finally:
+        if was_real:
+            pipeline.REAL_ENGINES.add("challenge")
+
+@pytest.mark.skipif(not os.environ.get("GROQ_API_KEY"), reason="live")
+def test_live_c001_agent_chain():
+    """End-to-End live test exactly once without retries."""
+    real_stages = {"profile", "features", "risk", "plans", "montecarlo", "stress", "cohort", "explanation", "verify", "challenge"}
+    original_real_engines = set(pipeline.REAL_ENGINES)
+    pipeline.REAL_ENGINES.update(real_stages)
+    try:
+        s = pipeline.run_stages("C001")
+        
+        bundle = s["bundle"]
+        expl = s["explanation"]
+        verif = s["verify"]
+        
+        # Make a challenge for plan C
+        chall = pipeline.run("challenge", bundle, expl, verif, "C")
+        
+        print("\n--- LIVE C001 AGENT CHAIN OUTPUT ---")
+        print("CHOSEN_PLAN_ID: C")
+        print("\nEXPLANATION OUTPUT:")
+        print(json.dumps(expl, indent=2))
+        print("\nVERIFIER RESULT:")
+        print(json.dumps(verif, indent=2))
+        print("\nCHALLENGER OUTPUT:")
+        print(json.dumps(chall, indent=2))
+        
+        # Check Privacy
+        final_str = json.dumps({"expl": expl, "verif": verif, "chall": chall}).lower()
+        assert "c001" not in final_str
+        assert "rahul mehta" not in final_str
+        assert "ground_truth_risk" not in final_str
+        
+        # Check factuality indicator
+        assert chall["chosen_plan_id"] == "C"
+        
+    finally:
+        pipeline.REAL_ENGINES.clear()
+        pipeline.REAL_ENGINES.update(original_real_engines)

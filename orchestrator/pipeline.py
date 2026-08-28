@@ -36,7 +36,7 @@ STAGES = {
     "cohort":      ("peer_cohort_out.json", "engines.peer_cohort:run"),
     "explanation": ("explanation_out.json", "agents.explanation:explain"),
     "challenge":   ("challenge_out.json",   "agents.challenger:challenge"),
-    "verify":      ("verifier_out.json",    "engines.verifier:verify"),
+    "verify":      ("verifier_out.json",    "agents.verifier:verify"),
 }
 
 
@@ -102,7 +102,7 @@ def compare(plans):
     }
 
 
-def build_bundle(customer, profile, features, risk, plans, montecarlo, stress):
+def build_bundle(customer, profile, features, risk, plans, montecarlo, stress, cohort):
     """Section 7. The only payload any agent ever sees.
 
     Identifiers are dropped here and nowhere else, so there is exactly one place
@@ -130,6 +130,7 @@ def build_bundle(customer, profile, features, risk, plans, montecarlo, stress):
         "plans": merged,
         "comparisons": compare(merged),
         "n_simulations": montecarlo["n_simulations"],
+        "peer_cohort": cohort,
     }
 
 
@@ -228,7 +229,7 @@ def run_engines(customer_id, extra_monthly_savings=0):
         "risk": risk, "plans": plans, "montecarlo": montecarlo,
         "stress": stress, "cohort": cohort,
         "bundle": build_bundle(customer, profile, features, risk,
-                               plans, montecarlo, stress),
+                               plans, montecarlo, stress, cohort),
     }
 
 
@@ -255,5 +256,13 @@ def make_plan(customer_id, extra_monthly_savings=0):
 
 def make_challenge(customer_id, chosen_plan_id):
     """Runs only after the customer picks a plan."""
-    bundle = run_engines(customer_id)["bundle"]
-    return run("challenge", bundle, chosen_plan_id)
+    s = run_stages(customer_id)
+    
+    # validate chosen_plan_id
+    if not any(p["plan_id"] == chosen_plan_id for p in s["plans"]["plans"]):
+        raise ValueError(f"Invalid chosen_plan_id: {chosen_plan_id}")
+        
+    challenge = run("challenge", s["bundle"], s["explanation"], s["verify"], chosen_plan_id)
+    return build_response(s["customer"], s["profile"], s["risk"], s["plans"],
+                          s["montecarlo"], s["stress"], s["explanation"],
+                          s["cohort"], s["verify"], challenge=challenge)
