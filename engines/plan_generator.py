@@ -102,3 +102,18 @@ def projected_corpus(monthly_investment, expected_annual_return, years):
         raw_corpus = monthly_investment * (((1 + r)**n - 1) / r) * (1 + r)
         
     return int(round(raw_corpus / 10000.0) * 10000)
+
+def calculate_affordability(monthly_surplus, monthly_investment):
+    """
+    Calculate affordability metrics for a proposed monthly investment.
+    Does not clamp negative surplus.
+    """
+    surplus_after_investment = monthly_surplus - monthly_investment
+    shortfall = max(0, monthly_investment - monthly_surplus)
+    feasible = monthly_investment <= monthly_surplus
+    
+    return {
+        "surplus_after_investment": surplus_after_investment,
+        "shortfall": shortfall,
+        "feasible": feasible
+    }

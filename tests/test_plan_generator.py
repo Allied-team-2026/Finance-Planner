@@ -103,3 +103,17 @@ def test_projected_corpus_plan_b():
 def test_projected_corpus_plan_c():
     # Plan C: 52000, 0.13, 5 years -> 4410000
     assert projected_corpus(52000, 0.13, 5) == 4410000
+
+from engines.plan_generator import calculate_affordability
+
+def test_calculate_affordability_feasible():
+    res = calculate_affordability(45000, 35000)
+    assert res["surplus_after_investment"] == 10000
+    assert res["shortfall"] == 0
+    assert res["feasible"] is True
+
+def test_calculate_affordability_unfeasible():
+    res = calculate_affordability(45000, 52000)
+    assert res["surplus_after_investment"] == -7000
+    assert res["shortfall"] == 7000
+    assert res["feasible"] is False
