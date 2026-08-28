@@ -147,6 +147,36 @@ def _get_model():
         _MODEL = train_baseline(X_train, y_train)
     return _MODEL, _IMPUTATION_MEDIAN
 
+def build_evidence(features, revealed_risk):
+    """Build factual evidence sentences deterministically from features."""
+    evidence = []
+    
+    val = features.get("panic_sell_count")
+    if val is not None:
+        evidence.append(f"The customer executed {val} panic sells.")
+        
+    val = features.get("avg_days_to_exit_after_drop")
+    if val is not None:
+        evidence.append(f"The customer exits investments {val} days after a market drop on average.")
+        
+    val = features.get("expense_volatility")
+    if val is not None:
+        evidence.append(f"The customer has an expense volatility of {val}.")
+        
+    val = features.get("emergency_fund_months")
+    if val is not None:
+        evidence.append(f"The customer maintains {val} months of emergency funds.")
+        
+    val = features.get("equity_allocation_pct")
+    if val is not None:
+        evidence.append(f"The customer has an equity allocation of {val}.")
+        
+    val = features.get("budget_overshoot_rate")
+    if val is not None:
+        evidence.append(f"The customer has a budget overshoot rate of {val}.")
+        
+    return evidence
+
 def predict(features, stated_risk):
     """Predict revealed risk from the six §3a observable features.
     
@@ -170,13 +200,15 @@ def predict(features, stated_risk):
     idx = classes.index(pred_label)
     confidence = float(model.predict_proba(X_pred)[0][idx])
     
+    evidence = build_evidence(features, pred_label)
+    
     return {
         "stated_risk": stated_risk,
         "revealed_risk": pred_label,
         "confidence": round(confidence, 2),
         "mismatch": (stated_risk != pred_label),
         "features_used": {k: features[k] for k in FEATURE_ORDER},
-        "evidence": [],
+        "evidence": evidence,
         "model_version": "rr-v1"
     }
 

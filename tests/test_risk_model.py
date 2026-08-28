@@ -85,8 +85,40 @@ def test_predict_validity_and_echo():
     assert 0.0 <= res["confidence"] <= 1.0
     assert res["mismatch"] == (res["revealed_risk"] != "aggressive")
     assert res["features_used"] == features
-    assert res["evidence"] == []
+    assert len(res["evidence"]) > 0
     assert res["model_version"] == "rr-v1"
+
+
+def test_evidence_generation():
+    """Predict must populate the evidence array deterministically with factual sentences."""
+    features = {
+        "panic_sell_count": 2,
+        "avg_days_to_exit_after_drop": 3.0,
+        "expense_volatility": 0.34,
+        "emergency_fund_months": 0.4,
+        "equity_allocation_pct": 0.5,
+        "budget_overshoot_rate": 0.42
+    }
+    res = predict(features, stated_risk="aggressive")
+    
+    evidence = res["evidence"]
+    assert len(evidence) == 6
+    
+    # Facts only based directly on the features
+    assert "2 panic sells" in evidence[0]
+    assert "3.0 days" in evidence[1]
+    assert "0.34" in evidence[2]
+    assert "0.4 months" in evidence[3]
+    assert "0.5" in evidence[4]
+    assert "0.42" in evidence[5]
+    
+    # Must not contain customer id or unsupported probabilities
+    text = " ".join(evidence).lower()
+    assert "c001" not in text
+    assert "probability" not in text
+    assert "predict" not in text
+    assert "likely" not in text
+    assert "will" not in text
 
 
 def test_predict_deterministic():
