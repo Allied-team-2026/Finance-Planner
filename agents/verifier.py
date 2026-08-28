@@ -48,17 +48,26 @@ def sweep(text):
         found.append((m.group(0), {val, val / 100} if pct else {val}, m.start(), m.end()))
     return found
 
-def check_cross_contamination(text, bundle, current_plan_id):
-    """
-    Check if the text contains unique values belonging ONLY to a different plan.
-    This enforces plan fidelity (e.g. not putting Plan B's investment in Plan A).
-    """
-    flags = []
-    other_plans = [p for p in bundle.get("plans", []) if p.get("plan_id") != current_plan_id]
-    this_plan = next((p for p in bundle.get("plans", []) if p.get("plan_id") == current_plan_id), {})
+def build_whitelists(bundle):
+    bundle_copy = dict(bundle)
+    plans = bundle_copy.pop("plans", [])
+    comparisons = bundle_copy.pop("comparisons", {})
     
-    if not this_plan:
-        return flags
+    global_wl = set()
+    collect_whitelist(bundle_copy, global_wl)
+    
+    comp_wl = set()
+    collect_whitelist(comparisons, comp_wl)
+    
+    plan_wls = {}
+    for p in plans:
+        pid = p.get("plan_id")
+        if not pid: continue
+        wl = set()
+        collect_whitelist(p, wl)
+        plan_wls[pid] = wl
+        
+    return global_wl, comp_wl, plan_wls
         
     text_numbers = [round(c, 6) for _, candidates, _, _ in sweep(text) for c in candidates]
     
@@ -167,24 +176,42 @@ def verify(explanation, bundle):
     # Peer cohort categorical checks
     cohort = bundle.get("peer_cohort")
     if cohort:
-        cohort_str = json.dumps(cohort).lower()
-        # If they mention a cohort size that doesn't match
-        # Wait, whitelist handles cohort numbers.
         pass
 
-    # Numeric whitelist
-    whitelist = collect_whitelist(bundle)
+    # Numeric whitelist mappings
+    global_wl, comp_wl, plan_wls = build_whitelists(bundle)
+    all_wl = set(global_wl) | set(comp_wl)
+    for wl in plan_wls.values():
+        all_wl.update(wl)
+
     for n in explanation.get("numbers_used", []):
         checked += 1
         val = round(float(n), 6)
-        if val not in whitelist:
-            # Check if it's a percentage representation (e.g. 40 for 0.4)
-            if round(val / 100, 6) not in whitelist:
+        if val not in all_wl:
+            if round(val / 100, 6) not in all_wl:
                 unverified.append(n)
             
     # Sweep prose
     for pt in explanation.get("plans_text", []):
         text = json.dumps(pt, ensure_ascii=False)
+        text_lower = text.lower()
+        pid = pt.get("plan_id")
+        
+        mentioned_pids = set([pid]) if pid else set()
+        for other_pid in plan_wls:
+            # Require explicit mentioning to allow cross-contamination values
+            if f"plan {other_pid.lower()}" in text_lower:
+                mentioned_pids.add(other_pid)
+                
+        allowed = set(global_wl)
+        for m_pid in mentioned_pids:
+            if m_pid in plan_wls:
+                allowed.update(plan_wls[m_pid])
+                
+        # Comparison values only allowed if multiple plans explicitly named
+        if len(mentioned_pids) > 1:
+            allowed.update(comp_wl)
+            
         for token, candidates, start, end in sweep(text):
             checked += 1
             # P10/P90 structural labels
@@ -198,18 +225,17 @@ def verify(explanation, bundle):
             if exempt:
                 continue
                 
-            if not any(round(c, 6) in whitelist for c in candidates):
-                unverified.append(f"Prose number {token} not found in bundle")
-                
-        # Fidelity
-        pid = pt.get("plan_id")
-        flags.extend(check_cross_contamination(text, bundle, pid))
+            if not any(round(c, 6) in allowed for c in candidates):
+                if any(round(c, 6) in all_wl for c in candidates):
+                    flags.append(f"Cross-plan contamination: {token} used in Plan {pid} without explicit reference")
+                else:
+                    unverified.append(f"Prose number {token} not found in bundle")
         
     for k in ["goal_priority_note", "mismatch_note", "peer_cohort_note"]:
         text = explanation.get(k, "")
         for token, candidates, _, _ in sweep(text):
             checked += 1
-            if not any(round(c, 6) in whitelist for c in candidates):
+            if not any(round(c, 6) in all_wl for c in candidates):
                 unverified.append(f"Prose number {token} in {k} not found in bundle")
 
     if unverified or flags:
