@@ -54,3 +54,38 @@ def test_contrast_3_conservative_risk():
     # horizon 15 -> max 0.85
     # min(0.85, 0.40, 0.85) = 0.40
     assert effective_equity_ceiling(profile, risk, goals) == 0.40
+
+from engines.plan_generator import select_allocation
+
+def test_select_allocation_conservative():
+    res = select_allocation("conservative", 0.85)
+    assert res["allocation"]["equity"] == 0.40
+    assert res["allocation"]["debt"] == 0.60
+    assert res["expected_annual_return"] == 0.09
+    assert res["exceeds_risk_ceiling"] is False
+
+def test_select_allocation_moderate_under_ceiling():
+    res = select_allocation("moderate", 0.85)
+    assert res["allocation"]["equity"] == 0.65
+    assert res["allocation"]["debt"] == 0.35
+    assert res["expected_annual_return"] == 0.11
+    assert res["exceeds_risk_ceiling"] is False
+
+def test_select_allocation_aggressive_under_ceiling():
+    res = select_allocation("aggressive", 0.90)
+    assert res["allocation"]["equity"] == 0.85
+    assert res["allocation"]["debt"] == 0.15
+    assert res["expected_annual_return"] == 0.13
+    assert res["exceeds_risk_ceiling"] is False
+
+def test_select_allocation_aggressive_exceeds_ceiling():
+    # aggressive is 0.85 equity. Against ceiling 0.65, it exceeds.
+    res = select_allocation("aggressive", 0.65)
+    assert res["allocation"]["equity"] == 0.85  # MUST NOT be lowered
+    assert res["exceeds_risk_ceiling"] is True
+
+def test_select_allocation_moderate_exactly_on_ceiling():
+    # moderate is 0.65 equity. Against ceiling 0.65, it does not exceed.
+    res = select_allocation("moderate", 0.65)
+    assert res["allocation"]["equity"] == 0.65
+    assert res["exceeds_risk_ceiling"] is False

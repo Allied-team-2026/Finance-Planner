@@ -64,3 +64,27 @@ def effective_equity_ceiling(profile, risk, goals):
                 
     # Use the stricter resulting percentage
     return min(base_equity, age_max, horizon_max)
+
+def select_allocation(risk_level, effective_ceiling):
+    """
+    Select the configured allocation and return for a risk level,
+    and flag if it exceeds the effective equity ceiling.
+    Does not silently lower the allocation.
+    """
+    assumptions = _load_assumptions()
+    if risk_level not in assumptions["risk_profiles"]:
+        raise ValueError(f"Unknown risk level: {risk_level}")
+        
+    profile = assumptions["risk_profiles"][risk_level]
+    
+    allocation = profile["allocation"]
+    expected_return = profile["expected_annual_return"]
+    
+    # Strict inequality to determine if it exceeds ceiling
+    exceeds = float(allocation["equity"]) > float(effective_ceiling)
+    
+    return {
+        "allocation": dict(allocation),
+        "expected_annual_return": expected_return,
+        "exceeds_risk_ceiling": exceeds
+    }
