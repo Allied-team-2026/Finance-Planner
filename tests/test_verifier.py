@@ -79,7 +79,7 @@ def valid_explanation():
         "goal_priority_note": "note",
         "mismatch_note": "stated aggressive but revealed moderate.",
         "peer_cohort_note": "cohort of 20 with 0.37 savings.",
-        "numbers_used": [35000, 2660000, 40, 73, 5000, 30000, 2410000, 65, 56, 15000, 52000, 4410000, 85, 92, 7000, 20, 0.37]
+        "numbers_used": [35000, 2660000, 0.40, 0.73, 5000, 30000, 2410000, 0.65, 0.56, 15000, 52000, 4410000, 0.85, 0.92, 7000, 20, 0.37]
     }
 
 def test_valid_explanation_passes(valid_explanation, valid_bundle):

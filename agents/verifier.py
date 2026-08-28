@@ -16,19 +16,18 @@ FORBIDDEN_CLAIMS = [
     (r"\b(?:recommend|you should)\s+(?:buying|selling)\b", "a specific product instruction"),
 ]
 
+from agents.numeric import validate_prose_numbers, extract_decimals
+
 def collect_whitelist(obj, out=None):
     if out is None:
         out = set()
     if isinstance(obj, bool):
         return out
     if isinstance(obj, (int, float)):
-        out.add(round(float(obj), 6))
+        out.add(float(obj))
     elif isinstance(obj, str):
-        for tok in re.findall(r"\d[\d,]*(?:\.\d+)?", obj):
-            try:
-                out.add(round(float(tok.replace(",", "")), 6))
-            except ValueError:
-                pass
+        for match, val, _, _ in extract_decimals(obj):
+            out.add(val)
     elif isinstance(obj, dict):
         for v in obj.values():
             collect_whitelist(v, out)
@@ -37,16 +36,6 @@ def collect_whitelist(obj, out=None):
             collect_whitelist(v, out)
     return out
 
-def sweep(text):
-    found = []
-    for m in re.finditer(r"(\d[\d,]*(?:\.\d+)?)(%?)", text):
-        raw, pct = m.group(1), m.group(2)
-        try:
-            val = float(raw.replace(",", ""))
-        except ValueError:
-            continue
-        found.append((m.group(0), {val, val / 100} if pct else {val}, m.start(), m.end()))
-    return found
 
 def build_whitelists(bundle):
     bundle_copy = dict(bundle)
@@ -69,40 +58,7 @@ def build_whitelists(bundle):
         
     return global_wl, comp_wl, plan_wls
         
-    text_numbers = [round(c, 6) for _, candidates, _, _ in sweep(text) for c in candidates]
-    
-    # Specific fields to check for cross-contamination
-    fields_to_check = ["monthly_investment", "projected_corpus", "success_probability"]
-    
-    for p in other_plans:
-        for field in fields_to_check:
-            val = p.get(field)
-            if val is None:
-                continue
-            
-            # If the value is in the text, BUT it's not this plan's value, AND it's not a global value like goal_amount
-            # It might be cross-contamination. 
-            # Note: We must allow comparisons like "Costs 5000 less than Plan B (30000)"
-            # So a strict cross-contamination check is risky if they explicitly name the other plan.
-            # But the prompt requires wrong monthly investment to fail.
-            # We will flag it if they use another plan's value AND they don't mention the other plan's ID.
-            if round(float(val), 6) in text_numbers:
-                if round(float(val), 6) != round(float(this_plan.get(field, -1)), 6):
-                    # They used a number from another plan. Did they mention the other plan?
-                    if f"plan {p['plan_id'].lower()}" not in text.lower():
-                        flags.append(f"Cross-contamination: used {field} {val} from Plan {p['plan_id']} without referencing it")
-                        
-    # Check allocation percentages explicitly
-    # If the text says 65% equity, but this plan is 40% equity, that's wrong.
-    this_equity = round(this_plan.get("allocation", {}).get("equity", -1), 6)
-    if this_equity >= 0:
-        for p in other_plans:
-            other_eq = round(p.get("allocation", {}).get("equity", -1), 6)
-            if other_eq in text_numbers and other_eq != this_equity:
-                if f"plan {p['plan_id'].lower()}" not in text.lower():
-                    flags.append(f"Cross-contamination: used equity allocation {other_eq} from Plan {p['plan_id']}")
-                    
-    return flags
+
 
 def verify(explanation, bundle):
     checked = 0
@@ -186,10 +142,10 @@ def verify(explanation, bundle):
 
     for n in explanation.get("numbers_used", []):
         checked += 1
-        val = round(float(n), 6)
-        if val not in all_wl:
-            if round(val / 100, 6) not in all_wl:
-                unverified.append(n)
+        # Use validate_prose_numbers so rounding rules apply consistently
+        errors = validate_prose_numbers(str(n), all_wl, raise_on_fail=False)
+        if errors:
+            unverified.append(n)
             
     # Sweep prose
     for pt in explanation.get("plans_text", []):
@@ -212,31 +168,29 @@ def verify(explanation, bundle):
         if len(mentioned_pids) > 1:
             allowed.update(comp_wl)
             
-        for token, candidates, start, end in sweep(text):
+        errors_allowed = validate_prose_numbers(text, allowed, raise_on_fail=False)
+        errors_all = validate_prose_numbers(text, all_wl, raise_on_fail=False)
+        
+        all_wl_failed_matches = {err[0] for err in errors_all}
+        
+        for match, val, err in errors_allowed:
             checked += 1
-            # P10/P90 structural labels
-            context = text[max(0, start - 10):min(len(text), end + 15)].lower()
-            exempt = False
-            for c in candidates:
-                if c == 10.0 and any(label in context for label in ["10th", "p10", "10-90", "10‑90"]):
-                    exempt = True
-                if c == 90.0 and any(label in context for label in ["90th", "p90", "10-90", "10‑90"]):
-                    exempt = True
-            if exempt:
-                continue
-                
-            if not any(round(c, 6) in allowed for c in candidates):
-                if any(round(c, 6) in all_wl for c in candidates):
-                    flags.append(f"Cross-plan contamination: {token} used in Plan {pid} without explicit reference")
-                else:
-                    unverified.append(f"Prose number {token} not found in bundle")
+            if match not in all_wl_failed_matches:
+                flags.append(f"Cross-plan contamination: {match} used in Plan {pid} without explicit reference")
+            else:
+                unverified.append(f"Prose number {match} not found in bundle")
+        
+        # We must increment checked for valid numbers too, to maintain consistency in check count.
+        for match, val, start, end in extract_decimals(text):
+            checked += 1
         
     for k in ["goal_priority_note", "mismatch_note", "peer_cohort_note"]:
         text = explanation.get(k, "")
-        for token, candidates, _, _ in sweep(text):
+        errors = validate_prose_numbers(text, all_wl, raise_on_fail=False)
+        for match, val, err in errors:
+            unverified.append(f"Prose number {match} in {k} not found in bundle")
+        for match, val, start, end in extract_decimals(text):
             checked += 1
-            if not any(round(c, 6) in all_wl for c in candidates):
-                unverified.append(f"Prose number {token} in {k} not found in bundle")
 
     if unverified or flags:
         result["status"] = "fail"

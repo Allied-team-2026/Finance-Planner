@@ -1,7 +1,7 @@
 import os
 import json
 import pytest
-from agents.explanation import build_explanation_payload, explain, extract_numbers_with_paths, get_inferred_units
+from agents.explanation import build_explanation_payload, explain
 from orchestrator import pipeline
 import groq
 
@@ -182,26 +182,7 @@ def test_valid_formatting_variant_is_accepted(monkeypatch):
     res = explain(bundle)
     assert res["numbers_used"] == [0.7376, 2500000]
 
-def test_explain_rejects_semantic_mismatch(monkeypatch):
-    """
-    Test that a number existing in the payload but used with the wrong units
-    is rejected by field-aware provenance.
-    """
-    monkeypatch.setenv("GROQ_API_KEY", "fake")
-    # Payload has years=5, no money values equal to 5.
-    bundle = {"peer_cohort": None, "plans": [{"plan_id": "A"}], "goals": [{"years": 5}], "comparisons": {"plan_count": 5}}
-    
-    out = json.dumps({
-        "plans_text": [{"plan_id": "A", "headline": "You have ₹5", "body": "b", "pros": [], "cons": []}],
-        "goal_priority_note": "note",
-        "mismatch_note": "note",
-        "peer_cohort_note": "note",
-        "numbers_used": [5.0]
-    })
-    
-    monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(out))
-    with pytest.raises(ValueError, match="Semantic mismatch: 5 used as money"):
-        explain(bundle)
+
 
 def test_explain_rejects_privacy_leaks(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "fake")

@@ -36,7 +36,7 @@ STAGES = {
     "cohort":      ("peer_cohort_out.json", "engines.peer_cohort:run"),
     "explanation": ("explanation_out.json", "agents.explanation:explain"),
     "challenge":   ("challenge_out.json",   "agents.challenger:challenge"),
-    "verify":      ("verifier_out.json",    "engines.verifier:verify"),
+    "verify":      ("verifier_out.json",    "agents.verifier:verify"),
 }
 
 
