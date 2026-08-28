@@ -98,16 +98,16 @@ def _generate_transactions(rng, monthly_income, n_months=24):
     return transactions
 
 
-def _generate_investment_events(rng, ground_truth_risk):
-    """Generate 2–6 investment events over the last ~3 years.  The number
-    of panic sells correlates with ground_truth_risk but is noisy, so the
-    label cannot be recovered from a single clean rule."""
+def _generate_investment_events(rng):
+    """Generate 2–6 investment events over the last ~3 years.
+
+    Panic-sell probability is fixed (not label-dependent) so the resulting
+    panic_sell_count and avg_days_to_exit are purely stochastic and can
+    serve as honest inputs to the label-assignment step.
+    """
     events = []
     n_events = rng.randint(2, 6)
-
-    # More conservative ground truth → more likely to have panic sells
-    panic_prob = {"conservative": 0.7, "moderate": 0.45, "aggressive": 0.15}
-    p = panic_prob[ground_truth_risk]
+    panic_prob = 0.40  # fixed probability — creates natural variation
 
     base_year = 2024
     for i in range(n_events):
@@ -120,12 +120,10 @@ def _generate_investment_events(rng, ground_truth_risk):
         amount = rng.randint(5, 40) * 10000
         instrument = "equity_mf"
 
-        if action == "sell" and rng.random() < p:
-            # panic sell during a market drop
+        if action == "sell" and rng.random() < panic_prob:
             market_drawdown_pct = round(rng.uniform(3.0, 15.0), 1)
             days_after_drop = rng.randint(1, 10)
         elif action == "sell":
-            # calm-market sell — not a panic sell
             market_drawdown_pct = 0.0
             days_after_drop = None
         else:
@@ -141,59 +139,102 @@ def _generate_investment_events(rng, ground_truth_risk):
             "days_after_drop": days_after_drop,
         })
 
-    # Sort by date
     events.sort(key=lambda e: e["date"])
     return events
 
 
-def _assign_ground_truth_risk(rng, age, dependents, employment_type,
-                               monthly_income, savings, equity_mf,
-                               total_assets):
-    """Assign ground_truth_risk using multiple noisy signals, not a single
-    clean rule.  The contract explicitly requires confounders so the ML
-    model cannot just relearn the generation rule."""
+def _compute_feature_proxies(transactions, investment_events,
+                              savings, equity_mf, total_assets):
+    """Compute approximate values of the six §3a observable features inline.
+
+    These are the same quantities that engines/features.py and
+    engines/profile.py would produce, but computed here without importing
+    those modules (to avoid circular dependencies).
+    """
+    # ── panic sells ─────────────────────────────────────────────────────
+    panic_sells = [
+        e for e in investment_events
+        if e["action"] == "sell" and e.get("days_after_drop") is not None
+    ]
+    panic_sell_count = len(panic_sells)
+
+    if panic_sell_count > 0:
+        avg_days_to_exit = (
+            sum(e["days_after_drop"] for e in panic_sells) / panic_sell_count
+        )
+    else:
+        avg_days_to_exit = 5.5  # neutral midpoint for scoring
+
+    # ── monthly expense statistics (last 12 months) ────────────────────
+    month_totals = {}
+    for t in transactions:
+        m = t["date"][:7]
+        month_totals[m] = month_totals.get(m, 0) + t["amount"]
+    sorted_months = sorted(month_totals.keys())[-12:]
+    monthly_vals = [month_totals[m] for m in sorted_months]
+
+    mean_expense = sum(monthly_vals) / len(monthly_vals) if monthly_vals else 1
+
+    if len(monthly_vals) >= 2:
+        var = sum((x - mean_expense) ** 2 for x in monthly_vals) / (len(monthly_vals) - 1)
+        expense_volatility = (var ** 0.5) / mean_expense
+    else:
+        expense_volatility = 0.0
+
+    emergency_fund_months = savings / mean_expense if mean_expense > 0 else 0.0
+
+    equity_allocation_pct = equity_mf / total_assets if total_assets > 0 else 0.0
+
+    overshoot = sum(1 for x in monthly_vals if x > mean_expense)
+    budget_overshoot_rate = overshoot / len(monthly_vals) if monthly_vals else 0.0
+
+    return {
+        "panic_sell_count": panic_sell_count,
+        "avg_days_to_exit": avg_days_to_exit,
+        "expense_volatility": expense_volatility,
+        "emergency_fund_months": emergency_fund_months,
+        "equity_allocation_pct": equity_allocation_pct,
+        "budget_overshoot_rate": budget_overshoot_rate,
+    }
+
+
+def _assign_ground_truth_risk(rng, proxies):
+    """Assign ground_truth_risk from the six observable features + noise.
+
+    Every feature contributes a centered score (mean ≈ 0 for a typical
+    customer).  Two independent noise terms (Gaussian + uniform confounder)
+    ensure no single feature deterministically defines the label.
+
+    Higher score → more aggressive.  Lower score → more conservative.
+    """
     score = 0.0
 
-    # Age signal (younger → more aggressive, but noisy)
-    if age < 30:
-        score += rng.uniform(0.5, 1.5)
-    elif age < 45:
-        score += rng.uniform(-0.3, 0.8)
-    else:
-        score += rng.uniform(-1.0, 0.3)
+    # ── feature signals (centered around typical values) ────────────────
+    # panic_sell_count: more panics → conservative
+    score -= (proxies["panic_sell_count"] - 0.8) * 0.55
 
-    # Dependents signal (fewer → more aggressive)
-    if dependents == 0:
-        score += rng.uniform(0.3, 1.0)
-    elif dependents <= 2:
-        score += rng.uniform(-0.3, 0.4)
-    else:
-        score += rng.uniform(-0.8, -0.1)
+    # avg_days_to_exit: faster exit → conservative, slower → aggressive
+    score += (proxies["avg_days_to_exit"] - 5.5) * 0.12
 
-    # Employment stability (salaried → slightly more aggressive capacity)
-    if employment_type == "salaried":
-        score += rng.uniform(0.0, 0.5)
+    # expense_volatility: higher volatility → conservative
+    score -= (proxies["expense_volatility"] - 0.11) * 8.0
 
-    # Savings buffer (higher relative savings → more conservative behaviour
-    # — this is a deliberate confounder: well-buffered people often ARE more
-    # conservative in practice, which contradicts the capacity signal)
-    savings_ratio = savings / max(monthly_income, 1)
-    if savings_ratio > 3.0:
-        score += rng.uniform(-0.6, 0.0)
-    elif savings_ratio > 1.0:
-        score += rng.uniform(-0.2, 0.3)
+    # emergency_fund_months: larger buffer → conservative
+    score -= (proxies["emergency_fund_months"] - 3.5) * 0.06
 
-    # Equity tilt (higher equity allocation → aggressive behaviour)
-    if total_assets > 0:
-        eq_pct = equity_mf / total_assets
-        score += rng.uniform(-0.2, 0.5) * eq_pct * 2
+    # equity_allocation_pct: more equity → aggressive
+    score += (proxies["equity_allocation_pct"] - 0.40) * 1.2
 
-    # Pure noise confounder — makes the label unpredictable from any subset
-    score += rng.uniform(-0.4, 0.4)
+    # budget_overshoot_rate: more overshoots → weakly conservative
+    score -= (proxies["budget_overshoot_rate"] - 0.50) * 0.8
 
-    if score > 1.5:
+    # ── noise + confounder ──────────────────────────────────────────────
+    score += rng.gauss(0, 0.20)       # Gaussian noise
+    score += rng.uniform(-0.12, 0.12) # independent uniform confounder
+
+    if score > 0.22:
         return "aggressive"
-    elif score > 0.3:
+    elif score > -0.22:
         return "moderate"
     else:
         return "conservative"
@@ -248,17 +289,20 @@ def generate_customer(seed, customer_id):
             "priority": i + 1,
         })
 
-    # Ground truth risk — noisy, multi-signal, with confounders
-    ground_truth_risk = _assign_ground_truth_risk(
-        rng, age, dependents, employment_type,
-        monthly_income, savings_account, equity_mf, total_assets,
-    )
-
     # Transactions — at least 24 distinct calendar months
     transactions = _generate_transactions(rng, monthly_income, n_months=24)
 
-    # Investment events — correlated with ground_truth_risk but noisy
-    investment_events = _generate_investment_events(rng, ground_truth_risk)
+    # Investment events — stochastic, not label-dependent
+    investment_events = _generate_investment_events(rng)
+
+    # Compute feature proxies from the generated data
+    proxies = _compute_feature_proxies(
+        transactions, investment_events,
+        savings_account, equity_mf, total_assets,
+    )
+
+    # Ground truth risk — derived from observable features + controlled noise
+    ground_truth_risk = _assign_ground_truth_risk(rng, proxies)
 
     return {
         "customer_id": customer_id,
