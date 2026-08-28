@@ -131,3 +131,55 @@ def calculate_plan_investments(monthly_surplus):
         "B": int(round(monthly_surplus * sizing["Plan B"])),
         "C": int(round(monthly_surplus * sizing["Plan C"]))
     }
+
+def generate(profile, risk, goals):
+    """
+    Generate three base financial plans using Profile, Risk, and Goals outputs.
+    Combines assumptions with effective equity ceilings and SIP logic.
+    """
+    assumptions = _load_assumptions()
+    
+    # 1. Primary goal
+    primary_goal = next((g for g in goals if g.get("priority") == 1), None)
+    if not primary_goal:
+        raise ValueError("No priority 1 goal found")
+        
+    # 2. Equity ceiling and investments
+    eff_ceiling = effective_equity_ceiling(profile, risk, goals)
+    monthly_surplus = profile.get("monthly_surplus", 0)
+    investments = calculate_plan_investments(monthly_surplus)
+    
+    # 3. Create plans
+    plan_defs = [
+        ("A", "Steady", "conservative"),
+        ("B", "Balanced", "moderate"),
+        ("C", "Growth", "aggressive")
+    ]
+    
+    plans = []
+    for pid, label, risk_lvl in plan_defs:
+        alloc_data = select_allocation(risk_lvl, eff_ceiling)
+        monthly_inv = investments[pid]
+        
+        corpus = projected_corpus(monthly_inv, alloc_data["expected_annual_return"], primary_goal["years"])
+        affordability = calculate_affordability(monthly_surplus, monthly_inv)
+        
+        plans.append({
+            "plan_id": pid,
+            "label": label,
+            "monthly_investment": monthly_inv,
+            "allocation": alloc_data["allocation"],
+            "expected_annual_return": alloc_data["expected_annual_return"],
+            "projected_corpus": corpus,
+            "goal_amount": primary_goal["amount"],
+            "years": primary_goal["years"],
+            "shortfall": affordability["shortfall"],
+            "feasible": affordability["feasible"],
+            "surplus_after_investment": affordability["surplus_after_investment"],
+            "exceeds_risk_ceiling": alloc_data["exceeds_risk_ceiling"]
+        })
+        
+    return {
+        "assumptions_version": assumptions["assumptions_version"],
+        "plans": plans
+    }

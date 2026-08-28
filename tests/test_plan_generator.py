@@ -160,3 +160,68 @@ def test_calculate_plan_investments_deterministic():
     res1 = calculate_plan_investments(67890)
     res2 = calculate_plan_investments(67890)
     assert res1 == res2
+
+from engines.plan_generator import generate
+import json
+from pathlib import Path
+
+def test_generate_c001_matches_mock():
+    # Load inputs
+    c001_profile = json.loads(Path("mocks/profile_out.json").read_text())
+    c001_risk = json.loads(Path("mocks/risk_out.json").read_text())
+    c001_goals = c001_profile["goals"]
+    
+    # Generate
+    res = generate(c001_profile, c001_risk, c001_goals)
+    
+    # Assert top-level
+    assert res["assumptions_version"] == "assump-v1"
+    assert len(res["plans"]) == 3
+    
+    # Plan A
+    pa = res["plans"][0]
+    assert pa["plan_id"] == "A"
+    assert pa["label"] == "Steady"
+    assert pa["monthly_investment"] == 35000
+    assert pa["allocation"]["equity"] == 0.40
+    assert pa["allocation"]["debt"] == 0.60
+    assert pa["expected_annual_return"] == 0.09
+    assert pa["projected_corpus"] == 2660000
+    assert pa["goal_amount"] == 2500000
+    assert pa["years"] == 5
+    assert pa["shortfall"] == 0
+    assert pa["feasible"] is True
+    assert pa["surplus_after_investment"] == 10000
+    assert pa["exceeds_risk_ceiling"] is False
+    
+    # Plan B
+    pb = res["plans"][1]
+    assert pb["plan_id"] == "B"
+    assert pb["label"] == "Balanced"
+    assert pb["monthly_investment"] == 30000
+    assert pb["allocation"]["equity"] == 0.65
+    assert pb["allocation"]["debt"] == 0.35
+    assert pb["expected_annual_return"] == 0.11
+    assert pb["projected_corpus"] == 2410000
+    assert pb["goal_amount"] == 2500000
+    assert pb["years"] == 5
+    assert pb["shortfall"] == 0
+    assert pb["feasible"] is True
+    assert pb["surplus_after_investment"] == 15000
+    assert pb["exceeds_risk_ceiling"] is False
+    
+    # Plan C
+    pc = res["plans"][2]
+    assert pc["plan_id"] == "C"
+    assert pc["label"] == "Growth"
+    assert pc["monthly_investment"] == 52000
+    assert pc["allocation"]["equity"] == 0.85
+    assert pc["allocation"]["debt"] == 0.15
+    assert pc["expected_annual_return"] == 0.13
+    assert pc["projected_corpus"] == 4410000
+    assert pc["goal_amount"] == 2500000
+    assert pc["years"] == 5
+    assert pc["shortfall"] == 7000
+    assert pc["feasible"] is False
+    assert pc["surplus_after_investment"] == -7000
+    assert pc["exceeds_risk_ceiling"] is True
