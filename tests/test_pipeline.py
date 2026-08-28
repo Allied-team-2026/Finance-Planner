@@ -165,6 +165,44 @@ def test_c001_real_profile_features_risk_plans_chain():
         pipeline.REAL_ENGINES.update(original_real_engines)
 
 
+def test_c001_real_profile_through_montecarlo_chain():
+    """Integration test activating real profile -> features -> risk -> plans -> montecarlo."""
+    real_stages = {"profile", "features", "risk", "plans", "montecarlo"}
+    original_real_engines = set(pipeline.REAL_ENGINES)
+    pipeline.REAL_ENGINES.update(real_stages)
+    try:
+        # Verify only the five stages are engines
+        status = pipeline.engine_status()
+        for st in real_stages:
+            assert status[st] == "engine"
+        for st in ("stress", "cohort", "explanation", "challenge", "verify"):
+            assert status[st] == "mock"
+
+        s = pipeline.run_engines("C001")
+        mc = s["montecarlo"]
+
+        # Top-level structure
+        assert mc["n_simulations"] == 10000
+        assert mc["returns_data_source"] == "nifty_yearly_2005_2025.csv"
+        assert len(mc["results"]) == 3
+
+        # Plan order preserved
+        ids = [r["plan_id"] for r in mc["results"]]
+        assert ids == ["A", "B", "C"]
+
+        # Per-plan validation
+        for r in mc["results"]:
+            assert 0.0 <= r["success_probability"] <= 1.0
+            assert 0 <= r["successful_simulations"] <= 10000
+            assert r["success_probability"] == r["successful_simulations"] / 10000
+            assert r["p10_corpus"] <= r["median_corpus"] <= r["p90_corpus"]
+            assert r["p10_gap_to_goal"] >= 0
+            assert r["p10_gap_to_goal"] == max(0, 2500000 - r["p10_corpus"])
+    finally:
+        pipeline.REAL_ENGINES.clear()
+        pipeline.REAL_ENGINES.update(original_real_engines)
+
+
 def test_real_plan_generator_activation():
     """Activate the real plan generator and ensure it works with the goals passed from the pipeline."""
     was_real = "plans" in pipeline.REAL_ENGINES
