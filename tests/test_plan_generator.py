@@ -131,3 +131,32 @@ def test_investment_sizing_factors():
     assert plan_a_inv == 35000
     assert plan_b_inv == 30000
     assert plan_c_inv == 52000
+
+from engines.plan_generator import calculate_plan_investments
+
+def test_calculate_plan_investments_c001():
+    res = calculate_plan_investments(45000)
+    assert res == {"A": 35000, "B": 30000, "C": 52000}
+
+def test_calculate_plan_investments_20000():
+    res = calculate_plan_investments(20000)
+    assert res == {"A": 15556, "B": 13333, "C": 23111}
+
+def test_calculate_plan_investments_100000():
+    res = calculate_plan_investments(100000)
+    assert res == {"A": 77778, "B": 66667, "C": 115556}
+
+def test_calculate_plan_investments_monotonicity():
+    surpluses = [10000, 25000, 50000, 80000, 150000]
+    prev_a, prev_b, prev_c = 0, 0, 0
+    for s in surpluses:
+        res = calculate_plan_investments(s)
+        assert res["A"] >= prev_a
+        assert res["B"] >= prev_b
+        assert res["C"] >= prev_c
+        prev_a, prev_b, prev_c = res["A"], res["B"], res["C"]
+
+def test_calculate_plan_investments_deterministic():
+    res1 = calculate_plan_investments(67890)
+    res2 = calculate_plan_investments(67890)
+    assert res1 == res2

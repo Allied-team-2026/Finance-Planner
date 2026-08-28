@@ -117,3 +117,17 @@ def calculate_affordability(monthly_surplus, monthly_investment):
         "shortfall": shortfall,
         "feasible": feasible
     }
+
+def calculate_plan_investments(monthly_surplus):
+    """
+    Calculate the integer monthly investments for Plan A, B, and C
+    using the configured sizing factors in assumptions.
+    """
+    assumptions = _load_assumptions()
+    sizing = assumptions["investment_sizing"]
+    
+    return {
+        "A": int(round(monthly_surplus * sizing["Plan A"])),
+        "B": int(round(monthly_surplus * sizing["Plan B"])),
+        "C": int(round(monthly_surplus * sizing["Plan C"]))
+    }
