@@ -211,30 +211,30 @@ def _assign_ground_truth_risk(rng, proxies):
 
     # ── feature signals (centered around typical values) ────────────────
     # panic_sell_count: more panics → conservative
-    score -= (proxies["panic_sell_count"] - 0.8) * 0.55
+    score -= (proxies["panic_sell_count"] - 0.8) * 0.25
 
     # avg_days_to_exit: faster exit → conservative, slower → aggressive
-    score += (proxies["avg_days_to_exit"] - 5.5) * 0.12
+    score += (proxies["avg_days_to_exit"] - 5.5) * 0.10
 
     # expense_volatility: higher volatility → conservative
-    score -= (proxies["expense_volatility"] - 0.11) * 8.0
+    score -= (proxies["expense_volatility"] - 0.11) * 1.0
 
     # emergency_fund_months: larger buffer → conservative
-    score -= (proxies["emergency_fund_months"] - 3.5) * 0.06
+    score -= (proxies["emergency_fund_months"] - 3.5) * 0.10
 
     # equity_allocation_pct: more equity → aggressive
-    score += (proxies["equity_allocation_pct"] - 0.40) * 1.2
+    score += (proxies["equity_allocation_pct"] - 0.40) * 1.0
 
     # budget_overshoot_rate: more overshoots → weakly conservative
-    score -= (proxies["budget_overshoot_rate"] - 0.50) * 0.8
+    score -= (proxies["budget_overshoot_rate"] - 0.50) * 0.50
 
     # ── noise + confounder ──────────────────────────────────────────────
     score += rng.gauss(0, 0.20)       # Gaussian noise
     score += rng.uniform(-0.12, 0.12) # independent uniform confounder
 
-    if score > 0.22:
+    if score > 0.20:
         return "aggressive"
-    elif score > -0.22:
+    elif score > -0.20:
         return "moderate"
     else:
         return "conservative"
