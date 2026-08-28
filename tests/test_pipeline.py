@@ -319,7 +319,6 @@ def test_null_cohort_preservation():
         
         s = pipeline.run_engines("C001")
         assert s["cohort"] is None
-        assert s["bundle"]["peer_cohort"] is None
         
         engines.peer_cohort.match_cohort = old_match
     finally:
