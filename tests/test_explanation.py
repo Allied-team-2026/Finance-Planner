@@ -113,7 +113,7 @@ def test_default_model_uses_schema(monkeypatch):
         "numbers_used": [100.0]
     })
     
-    monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(valid_out, assert_model="llama-3.3-70b-versatile", assert_schema=True))
+    monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(valid_out, assert_model="openai/gpt-oss-20b", assert_schema=True))
     res = explain(bundle)
     assert res["goal_priority_note"] == "note"
 
@@ -232,3 +232,54 @@ def test_explanation_live_groq():
     finally:
         pipeline.REAL_ENGINES.clear()
         pipeline.REAL_ENGINES.update(original_real)
+
+def test_extract_embedded_numbers():
+    from agents.explanation import extract_numbers_with_paths, validate_prose_numbers
+    import pytest
+    payload = {
+        "native": 0.99,
+        "risk": {
+            "evidence": [
+                "The customer has a budget overshoot rate of 0.42.",
+                "The customer has an equity allocation of 0.5.",
+                "The customer is C001 and id_123.",
+                "Cost is 2,500,000.",
+                "Probability is 0.7376."
+            ]
+        }
+    }
+    
+    numbers_map = extract_numbers_with_paths(payload)
+    
+    # 1. Native JSON number is accepted.
+    assert 0.99 in numbers_map
+    assert "payload.native" in numbers_map[0.99]
+    
+    # 2, 3, 4. Number embedded in risk.evidence string is accepted.
+    assert 0.42 in numbers_map
+    assert "payload.risk.evidence[0]" in numbers_map[0.42]
+    
+    assert 0.5 in numbers_map
+    assert "payload.risk.evidence[1]" in numbers_map[0.5]
+    
+    # 5. Existing 73.76% representation of 0.7376 remains accepted.
+    assert 0.7376 in numbers_map
+    assert "payload.risk.evidence[4]" in numbers_map[0.7376]
+    
+    # 6. Existing 2,500,000 representation remains accepted.
+    assert 2500000.0 in numbers_map
+    assert "payload.risk.evidence[3]" in numbers_map[2500000.0]
+    
+    # 7. An unrelated number remains rejected.
+    assert 0.88 not in numbers_map
+    
+    # 8. A number from a customer identifier is NOT treated as a financial number.
+    assert 1.0 not in numbers_map
+    assert 123.0 not in numbers_map
+    
+    validate_prose_numbers("budget overshoot rate of 0.42.", numbers_map)
+    validate_prose_numbers("equity allocation of 50%", numbers_map)
+    validate_prose_numbers("costs $2,500,000", numbers_map)
+    
+    with pytest.raises(ValueError, match="Unsupported numeric claim in prose: 0.88"):
+        validate_prose_numbers("rate of 0.88", numbers_map)

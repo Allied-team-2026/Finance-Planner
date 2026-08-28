@@ -418,6 +418,15 @@ def extract_numbers_with_paths(obj, path="payload"):
                 numbers.setdefault(num, []).extend(paths)
     elif isinstance(obj, (int, float)) and not isinstance(obj, bool):
         numbers.setdefault(float(obj), []).append(path)
+    elif isinstance(obj, str):
+        import re
+        matches = re.findall(r'(?<![a-zA-Z0-9_])-?\d+(?:,\d{3})*(?:\.\d+)?(?![a-zA-Z0-9_])', obj)
+        for match in matches:
+            try:
+                val = float(match.replace(',', ''))
+                numbers.setdefault(val, []).append(path)
+            except ValueError:
+                pass
     return numbers
 
 def get_inferred_units(path_list):
