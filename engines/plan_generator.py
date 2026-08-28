@@ -88,3 +88,17 @@ def select_allocation(risk_level, effective_ceiling):
         "expected_annual_return": expected_return,
         "exceeds_risk_ceiling": exceeds
     }
+
+def projected_corpus(monthly_investment, expected_annual_return, years):
+    """
+    Calculate the projected corpus using the SIP annuity-due formula.
+    Rounds the final result to the nearest 10,000.
+    """
+    if expected_annual_return == 0:
+        raw_corpus = monthly_investment * years * 12
+    else:
+        r = expected_annual_return / 12.0
+        n = years * 12
+        raw_corpus = monthly_investment * (((1 + r)**n - 1) / r) * (1 + r)
+        
+    return int(round(raw_corpus / 10000.0) * 10000)

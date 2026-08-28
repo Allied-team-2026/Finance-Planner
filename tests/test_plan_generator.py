@@ -89,3 +89,17 @@ def test_select_allocation_moderate_exactly_on_ceiling():
     res = select_allocation("moderate", 0.65)
     assert res["allocation"]["equity"] == 0.65
     assert res["exceeds_risk_ceiling"] is False
+
+from engines.plan_generator import projected_corpus
+
+def test_projected_corpus_plan_a():
+    # Plan A: 35000, 0.09, 5 years -> 2660000
+    assert projected_corpus(35000, 0.09, 5) == 2660000
+
+def test_projected_corpus_plan_b():
+    # Plan B: 30000, 0.11, 5 years -> 2410000
+    assert projected_corpus(30000, 0.11, 5) == 2410000
+
+def test_projected_corpus_plan_c():
+    # Plan C: 52000, 0.13, 5 years -> 4410000
+    assert projected_corpus(52000, 0.13, 5) == 4410000
