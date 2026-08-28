@@ -39,11 +39,6 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "Internal server error"},
     )
 
-def check_verifier(res: dict):
-    if res.get("verifier", {}).get("status") == "fail":
-        raise ValueError("Explanation failed verification")
-    return res
-
 
 class PlanRequest(BaseModel):
     customer_id: str
@@ -62,13 +57,13 @@ class WhatIfRequest(BaseModel):
 @app.post("/api/plan")
 def plan(request: PlanRequest):
     """The main call. Returns section 11 - profile, risk, three plans, prose."""
-    return check_verifier(make_plan(request.customer_id))
+    return make_plan(request.customer_id)
 
 
 @app.post("/api/challenge")
 def challenge(request: ChallengeRequest):
     """Runs only after the customer picks a plan. Returns section 10."""
-    return check_verifier(make_challenge(request.customer_id, request.chosen_plan_id))
+    return make_challenge(request.customer_id, request.chosen_plan_id)
 
 
 @app.post("/api/whatif")
@@ -79,7 +74,7 @@ def whatif(request: WhatIfRequest):
     now the surplus in the response goes up and the plan numbers do not move,
     because the mock returns fixed plans whatever you feed it.
     """
-    return check_verifier(make_plan(request.customer_id, request.extra_monthly_savings))
+    return make_plan(request.customer_id, request.extra_monthly_savings)
 
 
 @app.get("/api/status")

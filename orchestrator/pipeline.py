@@ -151,6 +151,8 @@ def build_response(customer, profile, risk, plans, montecarlo, stress,
 
     return {
         "schema_version": SCHEMA_VERSION,
+        "customer_id": customer["customer_id"],
+        "customer_name": customer["name"],
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "context": {k: customer[k] for k in
                     ("age", "dependents", "employment_type", "city_tier")},

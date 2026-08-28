@@ -66,11 +66,11 @@ def test_no_identity_reaches_the_agents():
     assert "ground_truth_risk" not in text
 
 
-def test_privacy_boundary_in_response():
-    """Ensure the final API response does not expose customer_id or customer_name."""
+def test_name_comes_back_in_the_response():
+    """De-identifying is only safe if the name is genuinely restored after."""
     response = make_plan("C001")
-    assert "customer_name" not in response
-    assert "customer_id" not in response
+    assert response["customer_name"] == "Rahul Mehta"
+    assert response["customer_id"] == "C001"
 
 
 def test_rename_seam_holds():
@@ -425,10 +425,9 @@ def test_make_challenge_integration():
             assert "plans_text" in expl
             assert "status" in verif
             
-            # test privacy on final output
+            # test privacy on final output (only internal fields like ground_truth_risk are excluded)
             result_str = json.dumps(result)
-            assert "C001" not in result_str
-            assert "Rahul" not in result_str
+            assert "ground_truth_risk" not in result_str
         finally:
             pipeline.run = original_run
     finally:
