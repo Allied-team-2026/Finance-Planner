@@ -203,6 +203,60 @@ def test_c001_real_profile_through_montecarlo_chain():
         pipeline.REAL_ENGINES.update(original_real_engines)
 
 
+def test_c001_real_profile_through_stress_chain():
+    """Integration test activating real profile -> features -> risk -> plans -> montecarlo -> stress."""
+    real_stages = {"profile", "features", "risk", "plans", "montecarlo", "stress"}
+    original_real_engines = set(pipeline.REAL_ENGINES)
+    pipeline.REAL_ENGINES.update(real_stages)
+    try:
+        # Verify only the six stages are engines
+        status = pipeline.engine_status()
+        for st in real_stages:
+            assert status[st] == "engine"
+        for st in ("customer", "cohort", "explanation", "challenge", "verify"):
+            assert status[st] == "mock"
+
+        s = pipeline.run_engines("C001")
+        
+        # 1. Verify the real Stress Test produces three results, one each for A/B/C.
+        stress = s["stress"]
+        assert "results" in stress
+        assert len(stress["results"]) == 3
+        ids = [r["plan_id"] for r in stress["results"]]
+        assert ids == ["A", "B", "C"]
+        
+        # 2. Verify every stress result contains the 5 required fields and 165 combos
+        for r in stress["results"]:
+            assert "survives" in r
+            assert "breaking_combo" in r
+            assert "breaking_probability" in r
+            assert "shortfall_if_hit" in r
+            assert r["combos_tested"] == 165
+        
+        # 3. Verify the orchestrator merges each stress result into the corresponding plan
+        bundle_plans = s["bundle"]["plans"]
+        assert len(bundle_plans) == 3
+        
+        for plan in bundle_plans:
+            # 4. Verify the orchestrator renames survives -> survives_stress
+            assert "survives_stress" in plan
+            assert "survives" not in plan
+            
+            # 5. Verify the Monte Carlo fields remain intact
+            assert "success_probability" in plan
+            assert "median_corpus" in plan
+            assert "p10_corpus" in plan
+            
+            # Additional stress merge fields
+            assert "breaking_combo" in plan
+            assert "breaking_probability" in plan
+            assert "shortfall_if_hit" in plan
+
+    finally:
+        pipeline.REAL_ENGINES.clear()
+        pipeline.REAL_ENGINES.update(original_real_engines)
+
+
 def test_real_plan_generator_activation():
     """Activate the real plan generator and ensure it works with the goals passed from the pipeline."""
     was_real = "plans" in pipeline.REAL_ENGINES

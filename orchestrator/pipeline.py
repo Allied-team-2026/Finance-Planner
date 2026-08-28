@@ -217,7 +217,7 @@ def run_engines(customer_id, extra_monthly_savings=0):
 
     plans = run("plans", profile, risk, customer.get("goals", []))
     montecarlo = run("montecarlo", plans)
-    stress = run("stress", plans, profile)
+    stress = run("stress", plans)
     cohort = run("cohort", customer, profile)
 
     return {
