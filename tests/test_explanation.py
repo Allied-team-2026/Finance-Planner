@@ -1,5 +1,7 @@
+import os
 import json
-from agents.explanation import build_explanation_payload
+import pytest
+from agents.explanation import build_explanation_payload, explain
 from orchestrator import pipeline
 
 def test_explanation_payload_schema_and_privacy():
@@ -10,7 +12,6 @@ def test_explanation_payload_schema_and_privacy():
     try:
         s = pipeline.run_engines("C001")
         bundle = s["bundle"]
-        
         
         payload = build_explanation_payload(bundle)
         
@@ -55,8 +56,116 @@ def test_determinism():
     bundle = {
         "context": {"age": 28},
         "profile": {"monthly_surplus": 45000},
-        "risk": {"stated": "aggressive"}
+        "risk": {"stated": "aggressive"},
+        "peer_cohort": None
     }
     p1 = build_explanation_payload(bundle)
     p2 = build_explanation_payload(bundle)
     assert p1 == p2
+
+def test_missing_api_key_raises_error(monkeypatch):
+    """Verify that explain() raises a clear error when GROQ_API_KEY is missing."""
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    with pytest.raises(ValueError, match="GROQ_API_KEY environment variable is not set"):
+        explain({})
+
+class MockChoices:
+    def __init__(self, content):
+        self.message = type("Msg", (), {"content": content})
+class MockResponse:
+    def __init__(self, content):
+        self.choices = [MockChoices(content)]
+
+def mock_groq_client(content):
+    class MockClient:
+        class Chat:
+            class Completions:
+                def create(self, **kwargs):
+                    return MockResponse(content)
+            completions = Completions()
+        chat = Chat()
+    return MockClient()
+
+def test_explain_validates_schema(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "fake")
+    bundle = {"peer_cohort": None, "profile": {"a": 100}}
+    
+    # Valid output
+    valid_out = json.dumps({
+        "plans_text": [{"plan_id": "A", "headline": "h", "body": "b", "pros": ["p"], "cons": ["c"]}],
+        "goal_priority_note": "note",
+        "mismatch_note": "note",
+        "numbers_used": [100.0]
+    })
+    
+    import groq
+    monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(valid_out))
+    res = explain(bundle)
+    assert res["goal_priority_note"] == "note"
+    
+    # Invalid structure (missing body)
+    invalid_struct = json.dumps({
+        "plans_text": [{"plan_id": "A", "headline": "h", "pros": [], "cons": []}],
+        "goal_priority_note": "note",
+        "mismatch_note": "note",
+        "numbers_used": [100.0]
+    })
+    monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(invalid_struct))
+    with pytest.raises(ValueError, match="Missing required field in plan_text"):
+        explain(bundle)
+
+def test_explain_rejects_unsupported_numbers(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "fake")
+    bundle = {"peer_cohort": None, "profile": {"a": 100}}
+    
+    # 200 is not in the payload
+    out = json.dumps({
+        "plans_text": [{"plan_id": "A", "headline": "h", "body": "b", "pros": [], "cons": []}],
+        "goal_priority_note": "note",
+        "mismatch_note": "note",
+        "numbers_used": [100.0, 200.0]
+    })
+    
+    import groq
+    monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(out))
+    with pytest.raises(ValueError, match="Unsupported numeric claim"):
+        explain(bundle)
+
+def test_explain_rejects_privacy_leaks(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "fake")
+    bundle = {"peer_cohort": None, "profile": {"a": 100}}
+    
+    out = json.dumps({
+        "plans_text": [{"plan_id": "A", "headline": "h", "body": "C001 is the user", "pros": [], "cons": []}],
+        "goal_priority_note": "note",
+        "mismatch_note": "note",
+        "numbers_used": [100.0]
+    })
+    
+    import groq
+    monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(out))
+    with pytest.raises(ValueError, match="Privacy violation: 'c001' found"):
+        explain(bundle)
+
+@pytest.mark.skipif(not os.environ.get("GROQ_API_KEY"), reason="Requires GROQ_API_KEY")
+def test_explanation_live_groq():
+    """Live integration test with Groq API for C001."""
+    real_stages = {"profile", "features", "risk", "plans", "montecarlo", "stress", "cohort"}
+    original_real = set(pipeline.REAL_ENGINES)
+    pipeline.REAL_ENGINES.update(real_stages)
+    try:
+        s = pipeline.run_engines("C001")
+        bundle = s["bundle"]
+        result = explain(bundle)
+        
+        # Verify schema
+        assert isinstance(result["plans_text"], list)
+        assert isinstance(result["goal_priority_note"], str)
+        assert isinstance(result["numbers_used"], list)
+        
+        print("\n=== LIVE EXPLANATION RESULT ===")
+        print(json.dumps(result, indent=2))
+        
+    finally:
+        pipeline.REAL_ENGINES.clear()
+        pipeline.REAL_ENGINES.update(original_real)

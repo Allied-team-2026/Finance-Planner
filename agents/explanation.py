@@ -406,30 +406,107 @@ def build_explanation_payload(bundle):
 
     return clean(payload)
 
+def extract_numbers(obj):
+    numbers = set()
+    if isinstance(obj, dict):
+        for v in obj.values():
+            numbers.update(extract_numbers(v))
+    elif isinstance(obj, list):
+        for v in obj:
+            numbers.update(extract_numbers(v))
+    elif isinstance(obj, (int, float)) and not isinstance(obj, bool):
+        numbers.add(float(obj))
+    return numbers
+
 def explain(bundle):
     """Section 8. Turn plan_bundle into readable plan text.
-
+    
     Called by the orchestrator as `agents.explanation:explain`.
     """
-    if not bundle.get("plans"):
-        raise MissingField("payload has no plans to explain")
-
-    prose = Prose(bundle)
-    plans_text = []
-
-    for plan in bundle["plans"]:
-        pid = plan["plan_id"]
-        plans_text.append({
-            "plan_id": pid,
-            "headline": _headline(prose, pid, plan),
-            "body": _body(prose, pid, plan, bundle),
-            "pros": _pros(prose, pid, plan, bundle),
-            "cons": _cons(prose, pid, plan, bundle),
-        })
-
-    return {
-        "plans_text": plans_text,
-        "goal_priority_note": _goal_priority_note(prose, bundle),
-        "mismatch_note": _mismatch_note(prose, bundle),
-        "numbers_used": _declare(prose.numbers),
+    import os
+    import json
+    
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        raise ValueError("GROQ_API_KEY environment variable is not set")
+        
+    try:
+        from groq import Groq
+    except ImportError:
+        raise ImportError("groq package is required. Run 'pip install groq'")
+        
+    payload = build_explanation_payload(bundle)
+    
+    system_prompt = """You are a financial explanation agent.
+Your task is to explain the financial plans provided in the payload.
+Use ONLY numbers present in the supplied payload. Never invent or calculate numbers.
+Do not calculate percentages from decimals, simulation counts from probabilities, shortfalls, investment deltas, savings rates, breaking probabilities, or corpus values. Quote supplied numbers exactly as they appear in the payload.
+Never identify the customer.
+Do not present peer statistics as recommendations.
+Explain risk mismatch when present.
+Explain affordability and stress-test outcomes.
+Return the required JSON structure exactly:
+{
+  "plans_text": [
+    {
+      "plan_id": "...",
+      "headline": "...",
+      "body": "...",
+      "pros": ["...", "..."],
+      "cons": ["...", "..."]
     }
+  ],
+  "goal_priority_note": "...",
+  "mismatch_note": "...",
+  "numbers_used": [...]
+}
+"""
+
+    client = Groq(api_key=api_key)
+    response = client.chat.completions.create(
+        model="llama3-8b-8192",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": json.dumps(payload)}
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.0
+    )
+    
+    result = json.loads(response.choices[0].message.content)
+    
+    # 1. Structure validation
+    if "plans_text" not in result or not isinstance(result["plans_text"], list):
+        raise ValueError("Missing or invalid 'plans_text'")
+    for pt in result["plans_text"]:
+        for f in ["plan_id", "headline", "body", "pros", "cons"]:
+            if f not in pt:
+                raise ValueError(f"Missing required field in plan_text: {f}")
+        if not isinstance(pt["headline"], str) or not isinstance(pt["body"], str):
+            raise ValueError("headline and body must be strings")
+        if not isinstance(pt["pros"], list) or not isinstance(pt["cons"], list):
+            raise ValueError("pros and cons must be lists")
+            
+    for f in ["goal_priority_note", "mismatch_note"]:
+        if f not in result or not isinstance(result[f], str):
+            raise ValueError(f"Missing or invalid '{f}'")
+    if "numbers_used" not in result or not isinstance(result["numbers_used"], list):
+        raise ValueError("Missing or invalid 'numbers_used'")
+        
+    # 2. Privacy validation
+    result_str = json.dumps(result).lower()
+    # Check for PII or raw data leaks
+    forbidden_terms = ["jane", "c001", "g00", "ground_truth_risk", "rahul", "mehta", "account", "transaction", "investment_event"]
+    for term in forbidden_terms:
+        if term in result_str:
+            raise ValueError(f"Privacy violation: '{term}' found in explanation")
+            
+    # 3. Numeric validation
+    allowed_numbers = extract_numbers(payload)
+    for num in result["numbers_used"]:
+        if not isinstance(num, (int, float)):
+            raise ValueError(f"Invalid number type in numbers_used: {num}")
+        if float(num) not in allowed_numbers:
+            raise ValueError(f"Unsupported numeric claim: {num} is not in the payload")
+            
+    return result
