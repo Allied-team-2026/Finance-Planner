@@ -125,6 +125,61 @@ def evaluate(clf, X_test, y_test):
     }
 
 
+# ── production interface ────────────────────────────────────────────────────
+
+_MODEL = None
+_IMPUTATION_MEDIAN = None
+
+def _get_model():
+    """Lazily train and cache the model and imputation median."""
+    global _MODEL, _IMPUTATION_MEDIAN
+    if _MODEL is None:
+        X, y, _ = load_dataset()
+        
+        # Calculate imputation median from the raw JSON to cache it
+        records = json.loads(Path(DATA_PATH).read_text())
+        days = [r["features"]["avg_days_to_exit_after_drop"] 
+                for r in records if r["features"]["avg_days_to_exit_after_drop"] is not None]
+        _IMPUTATION_MEDIAN = float(np.median(days))
+        
+        X_train, _, y_train, _ = split_data(X, y)
+        _MODEL = train_baseline(X_train, y_train)
+    return _MODEL, _IMPUTATION_MEDIAN
+
+def predict(features, stated_risk):
+    """Predict revealed risk from the six §3a observable features.
+    
+    Conforms to the §3b contract output. Raw customer data is never used.
+    """
+    model, median_val = _get_model()
+    
+    # Build feature row in exact order, imputing null exit days
+    x_row = []
+    for k in FEATURE_ORDER:
+        val = features[k]
+        if k == "avg_days_to_exit_after_drop" and val is None:
+            val = median_val
+        x_row.append(float(val))
+        
+    X_pred = np.array([x_row])
+    
+    pred_label = model.predict(X_pred)[0]
+    
+    classes = list(model.classes_)
+    idx = classes.index(pred_label)
+    confidence = float(model.predict_proba(X_pred)[0][idx])
+    
+    return {
+        "stated_risk": stated_risk,
+        "revealed_risk": pred_label,
+        "confidence": round(confidence, 2),
+        "mismatch": (stated_risk != pred_label),
+        "features_used": {k: features[k] for k in FEATURE_ORDER},
+        "evidence": [],
+        "model_version": "rr-v1"
+    }
+
+
 # ── main ────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
