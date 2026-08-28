@@ -1,4 +1,4 @@
-"""Tests for the §3b baseline risk model."""
+"""Tests for the §3b baseline risk model (using the correlated dataset)."""
 
 import numpy as np
 from models.risk_model import (

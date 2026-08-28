@@ -1,6 +1,7 @@
 """§3b Revealed Risk — baseline model training and evaluation.
 
-This module trains on the six §3a features and ground_truth_risk labels.
+This module trains on the six §3a features and ground_truth_risk labels
+(which are now generated with meaningful correlation to the features).
 It must never touch a raw customer record (seam rule).
 """
 
