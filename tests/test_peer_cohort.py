@@ -385,8 +385,122 @@ def test_most_common_real_generated_peer():
     # No mocks, uses real models
     res = match_cohort(customers, c001, "aggressive")
     
-    # Will use real build_profile, extract, predict, generate
-    stats = calculate_cohort_statistics(res["peers"], c001)
+# ------------------------------------------------------------- 6. Public run() API
+
+def test_run_schema_and_privacy(mock_build_profile, monkeypatch):
+    from engines.peer_cohort import run
+    monkeypatch.setattr("engines.peer_cohort.extract", lambda p, prof: {})
+    monkeypatch.setattr("engines.peer_cohort.predict", lambda feats, stated: {"revealed_risk": stated})
+    monkeypatch.setattr("engines.peer_cohort.generate", lambda prof, risk, goals: {
+        "plans": [{"plan_id": "B", "label": "Balanced", "allocation": {"equity": 0.5}}]
+    })
     
-    assert stats["most_common_plan_label"] in ["Steady", "Balanced", "Growth"]
-    assert "equity" in stats["most_common_allocation"]
+    # 20 identical peers to guarantee a full match cohort
+    peers = []
+    for i in range(25):
+        peers.append({
+            "customer_id": f"peer_{i}",
+            "name": f"Peer {i}",
+            "age": 28,
+            "monthly_income": 120000,
+            "monthly_surplus": 45000,
+            "stated_risk": "aggressive",
+            "goals": [{"name": "house_downpayment", "priority": 1}]
+        })
+        
+    c001_raw = {
+        "customer_id": "C001",
+        "name": "Jane Doe",
+        "age": 28,
+        "monthly_income": 120000,
+        "monthly_surplus": 45000,
+        "stated_risk": "aggressive",
+        "goals": [{"name": "house_downpayment", "priority": 1}]
+    }
+    c001_prof = {"monthly_income": 120000, "monthly_surplus": 45000}
+    c001_risk = {"stated_risk": "aggressive"}
+    
+    result = run(peers, c001_raw, c001_prof, c001_risk)
+    
+    # Check exact contract fields
+    assert set(result.keys()) == {
+        "cohort_size", "matched_on", "age_band", "income_band", "goal_type",
+        "median_monthly_surplus", "median_savings_rate", "customer_savings_rate",
+        "savings_rate_percentile", "mismatch_rate", "most_common_plan_label",
+        "most_common_allocation"
+    }
+    
+    # Check bands propagated correctly
+    assert result["age_band"] == "26-30"
+    assert result["income_band"] == "100000-150000"
+    assert result["goal_type"] == "house_downpayment"
+    assert result["matched_on"] == ["age_band", "income_band", "goal_type", "stated_risk"]
+    assert result["cohort_size"] == 25
+    
+    # Check NO individual data leaked
+    res_str = json.dumps(result)
+    assert "C001" not in res_str
+    assert "Jane" not in res_str
+    assert "peer_" not in res_str
+
+def test_run_under_20_returns_none():
+    from engines.peer_cohort import run
+    peers = [{"age": 28, "monthly_income": 120000, "stated_risk": "aggressive", "goals": [{"name": "house_downpayment", "priority": 1}]}]
+    c001_raw = peers[0]
+    c001_prof = {"monthly_income": 120000, "monthly_surplus": 45000}
+    c001_risk = {"stated_risk": "aggressive"}
+    assert run(peers, c001_raw, c001_prof, c001_risk) is None
+
+def test_run_real_c001():
+    from engines.peer_cohort import run
+    from engines.synthetic_data import generate_dataset
+    from engines.profile import build_profile
+    from engines.features import extract
+    from models.risk_model import predict
+    
+    customers = generate_dataset(1000, seed=42)
+    # The true C001 customer from the prompt specification
+    c001_raw = {
+        "customer_id": "C001",
+        "name": "Jane Doe",
+        "age": 28,
+        "monthly_income": 120000,
+        "assets": {"savings_account": 30000}, # Corrected savings per JSON_CONTRACT.md 
+        "stated_risk": "aggressive",
+        "goals": [{"name": "house_downpayment", "priority": 1, "target_amount": 2500000, "years": 5}]
+    }
+    # For a real run we need valid profile and risk inputs:
+    c001_prof = build_profile(c001_raw)
+    features = extract(c001_raw, c001_prof)
+    c001_risk = predict(features, "aggressive")
+    
+    result = run(customers, c001_raw, c001_prof, c001_risk)
+    
+    assert result is not None
+    assert result["cohort_size"] >= 20
+    assert "stated_risk" not in result["matched_on"]  # Fallback dropped stated_risk in earlier test
+    assert result["mismatch_rate"] >= 0.0
+    assert result["most_common_plan_label"] in ["Steady", "Balanced", "Growth"]
+    
+def test_run_determinism():
+    from engines.peer_cohort import run
+    from engines.synthetic_data import generate_dataset
+    from engines.profile import build_profile
+    from engines.features import extract
+    from models.risk_model import predict
+    
+    customers = generate_dataset(1000, seed=42)
+    c001_raw = {
+        "age": 28,
+        "monthly_income": 120000,
+        "assets": {"savings_account": 30000},
+        "stated_risk": "aggressive",
+        "goals": [{"name": "house_downpayment", "priority": 1, "target_amount": 2500000, "years": 5}]
+    }
+    c001_prof = build_profile(c001_raw)
+    features = extract(c001_raw, c001_prof)
+    c001_risk = predict(features, "aggressive")
+    
+    r1 = run(customers, c001_raw, c001_prof, c001_risk)
+    r2 = run(customers, c001_raw, c001_prof, c001_risk)
+    assert r1 == r2

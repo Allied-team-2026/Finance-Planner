@@ -211,3 +211,49 @@ def calculate_mismatch_rate(matched_customers):
             mismatches += 1
             
     return mismatches / num_peers
+
+def run(customers, customer, profile, risk):
+    """
+    Execute the complete Peer Cohort engine.
+    
+    Args:
+        customers (list): The full generated customer dataset.
+        customer (dict): The current customer's raw record.
+        profile (dict): The current customer's Profile output.
+        risk (dict): The current customer's Risk output.
+        
+    Returns:
+        dict: The complete cohort aggregate result, or None if < 20 peers.
+    """
+    # 1. Derive matching bands
+    c_age_band = age_band(customer["age"])
+    c_income_band = income_band(profile["monthly_income"])
+    c_goal_type = get_priority_1_goal(customer)
+    c_stated_risk = risk.get("stated_risk", customer.get("stated_risk"))
+    
+    # 2. Perform cohort matching
+    match_result = match_cohort(customers, customer, c_stated_risk)
+    if not match_result or match_result["cohort_size"] < 20:
+        return None
+        
+    peers = match_result["peers"]
+    
+    # 3. Calculate statistics
+    stats = calculate_cohort_statistics(peers, profile)
+    mismatch = calculate_mismatch_rate(peers)
+    
+    # 4. Return EXACT contract fields, privacy preserved
+    return {
+        "cohort_size": match_result["cohort_size"],
+        "matched_on": match_result["matched_on"],
+        "age_band": c_age_band,
+        "income_band": c_income_band,
+        "goal_type": c_goal_type,
+        "median_monthly_surplus": stats["median_monthly_surplus"],
+        "median_savings_rate": stats["median_savings_rate"],
+        "customer_savings_rate": stats["customer_savings_rate"],
+        "savings_rate_percentile": stats["savings_rate_percentile"],
+        "mismatch_rate": mismatch,
+        "most_common_plan_label": stats["most_common_plan_label"],
+        "most_common_allocation": stats["most_common_allocation"]
+    }
