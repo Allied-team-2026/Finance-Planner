@@ -10,7 +10,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from engines.montecarlo import load_historical_returns, sample_returns, simulate_path, simulate_plan  # noqa: E402
+from engines.montecarlo import (  # noqa: E402
+    load_historical_returns, sample_returns, simulate_path,
+    simulate_plan, simulate,
+)
 import pytest  # noqa: E402
 
 
@@ -237,3 +240,103 @@ def test_simulate_plan_success_probability_range():
     """success_probability must be between 0.0 and 1.0."""
     result = simulate_plan(TEST_PLAN)
     assert 0.0 <= result["success_probability"] <= 1.0
+
+
+# ------------------------------------------------------------ simulate
+
+SMALL_PLANS = {"plans": [
+    {"plan_id": "X", "monthly_investment": 10000, "years": 2, "goal_amount": 200000},
+    {"plan_id": "Y", "monthly_investment": 15000, "years": 2, "goal_amount": 300000},
+    {"plan_id": "Z", "monthly_investment": 20000, "years": 2, "goal_amount": 400000},
+]}
+
+C001_PLANS = {"plans": [
+    {"plan_id": "A", "monthly_investment": 35000, "years": 5, "goal_amount": 2500000},
+    {"plan_id": "B", "monthly_investment": 30000, "years": 5, "goal_amount": 2500000},
+    {"plan_id": "C", "monthly_investment": 52000, "years": 5, "goal_amount": 2500000},
+]}
+
+
+def test_simulate_output_schema():
+    """Top-level output must have n_simulations, results, returns_data_source."""
+    result = simulate(SMALL_PLANS, n_simulations=100)
+    assert set(result.keys()) == {"n_simulations", "results", "returns_data_source"}
+    assert result["n_simulations"] == 100
+    assert result["returns_data_source"] == "nifty_yearly_2005_2025.csv"
+
+
+def test_simulate_per_plan_schema():
+    """Each per-plan result must have the seven §5 fields."""
+    result = simulate(SMALL_PLANS, n_simulations=100)
+    expected_keys = {
+        "plan_id", "success_probability", "successful_simulations",
+        "median_corpus", "p10_corpus", "p90_corpus", "p10_gap_to_goal",
+    }
+    for r in result["results"]:
+        assert set(r.keys()) == expected_keys
+
+
+def test_simulate_three_plans_count():
+    result = simulate(SMALL_PLANS, n_simulations=100)
+    assert len(result["results"]) == 3
+
+
+def test_simulate_order_preserved():
+    """Output plan order must match input plan order."""
+    result = simulate(SMALL_PLANS, n_simulations=100)
+    ids = [r["plan_id"] for r in result["results"]]
+    assert ids == ["X", "Y", "Z"]
+
+
+def test_simulate_deterministic():
+    """Same seed must produce identical results."""
+    a = simulate(SMALL_PLANS, n_simulations=100, seed=42)
+    b = simulate(SMALL_PLANS, n_simulations=100, seed=42)
+    assert a == b
+
+
+def test_simulate_different_seed():
+    """Different seeds should produce different results."""
+    a = simulate(SMALL_PLANS, n_simulations=1000, seed=42)
+    b = simulate(SMALL_PLANS, n_simulations=1000, seed=999)
+    a_medians = [r["median_corpus"] for r in a["results"]]
+    b_medians = [r["median_corpus"] for r in b["results"]]
+    assert a_medians != b_medians
+
+
+def test_simulate_n_simulations_propagated():
+    """n_simulations is recorded and constrains successful_simulations."""
+    result = simulate(SMALL_PLANS, n_simulations=500)
+    assert result["n_simulations"] == 500
+    for r in result["results"]:
+        assert 0 <= r["successful_simulations"] <= 500
+
+
+def test_simulate_zero_investment_plan():
+    """Zero monthly investment must produce zero successes for a positive goal."""
+    plans = {"plans": [
+        {"plan_id": "N", "monthly_investment": 0, "years": 2, "goal_amount": 100000},
+    ]}
+    result = simulate(plans, n_simulations=100)
+    r = result["results"][0]
+    assert r["successful_simulations"] == 0
+    assert r["success_probability"] == 0.0
+
+
+def test_simulate_c001_integration():
+    """C001's three real plans run through simulate() end to end."""
+    result = simulate(C001_PLANS, n_simulations=10000, seed=42)
+
+    assert result["n_simulations"] == 10000
+    assert result["returns_data_source"] == "nifty_yearly_2005_2025.csv"
+    assert len(result["results"]) == 3
+
+    ids = [r["plan_id"] for r in result["results"]]
+    assert ids == ["A", "B", "C"]
+
+    for r in result["results"]:
+        assert 0.0 <= r["success_probability"] <= 1.0
+        assert 0 <= r["successful_simulations"] <= 10000
+        assert r["success_probability"] == r["successful_simulations"] / 10000
+        assert r["p10_corpus"] <= r["median_corpus"] <= r["p90_corpus"]
+        assert r["p10_gap_to_goal"] == max(0, 2500000 - r["p10_corpus"])

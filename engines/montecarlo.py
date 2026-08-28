@@ -1,9 +1,10 @@
 """
-§5 Monte Carlo Simulation – historical-return loader, resampling, and
-single-plan simulation.
+§5 Monte Carlo Simulation.
 
-The full multi-plan simulate() API will be added in a later step. This module
-provides:
+Public API:
+  simulate(plans, n_simulations=10000, seed=42)
+
+Internal helpers:
   - load_historical_returns(): reads the Nifty 50 PR annual returns CSV
   - sample_returns(): deterministic with-replacement resampling
   - simulate_path(): single-path corpus calculation from a sampled return sequence
@@ -16,6 +17,7 @@ import statistics
 from pathlib import Path
 
 DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "nifty_yearly_2005_2025.csv"
+RETURNS_DATA_SOURCE = "nifty_yearly_2005_2025.csv"
 
 
 def load_historical_returns():
@@ -156,5 +158,48 @@ def simulate_plan(plan, historical_returns=None, n_simulations=10000, seed=42):
         "p10_corpus": p10_corpus,
         "p90_corpus": p90_corpus,
         "p10_gap_to_goal": max(0, goal_amount - p10_corpus),
+    }
+
+
+def simulate(plans, n_simulations=10000, seed=42):
+    """§5 contract-facing Monte Carlo simulation for multiple plans.
+
+    Runs n_simulations historical-return paths for each plan independently,
+    using the same historical dataset but deterministic per-plan seeds derived
+    from the master seed. Input plan order is preserved in results.
+
+    Args:
+        plans: dict with 'plans' key containing a list of plan dicts, each
+            having at least 'plan_id', 'monthly_investment', 'years',
+            'goal_amount'. This is the raw output from the Plan Generator.
+        n_simulations: number of simulation paths per plan (default 10,000).
+        seed: master seed for deterministic reproducibility.
+
+    Returns:
+        dict with 'n_simulations', 'results' (list of per-plan results),
+        and 'returns_data_source'.
+    """
+    historical_returns = load_historical_returns()
+
+    # Derive a deterministic but independent seed for each plan from the
+    # master seed, so plans do not share RNG state.
+    master_rng = random.Random(seed)
+    plan_list = plans["plans"]
+
+    results = []
+    for plan in plan_list:
+        plan_seed = master_rng.randint(0, 2**31 - 1)
+        result = simulate_plan(
+            plan,
+            historical_returns=historical_returns,
+            n_simulations=n_simulations,
+            seed=plan_seed,
+        )
+        results.append(result)
+
+    return {
+        "n_simulations": n_simulations,
+        "results": results,
+        "returns_data_source": RETURNS_DATA_SOURCE,
     }
 
