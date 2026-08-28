@@ -120,11 +120,64 @@ def arguments_handed_to(stage, target, mock_file, **what_if):
 
 
 def test_a_real_engine_receives_the_arguments_it_expects():
-    """The defect this file used to have, now pinned. §4 takes profile, risk."""
-    profile, risk = arguments_handed_to("plans", "engines.plan_generator:generate",
+    """The defect this file used to have, now pinned. §4 takes profile, risk, goals."""
+    profile, risk, goals = arguments_handed_to("plans", "engines.plan_generator:generate",
                                         "plans_out.json")
     assert profile == load_mock("profile_out.json")
     assert risk == load_mock("risk_out.json")
+    assert goals == load_mock("customer_C001.json").get("goals", [])
+
+
+def test_c001_real_profile_features_risk_plans_chain():
+    """Integration test activating real profile -> features -> risk -> plans chain."""
+    real_stages = {"profile", "features", "risk", "plans"}
+    original_real_engines = set(pipeline.REAL_ENGINES)
+    pipeline.REAL_ENGINES.update(real_stages)
+    try:
+        # Capture engine status to verify active set
+        status = pipeline.engine_status()
+        for st in real_stages:
+            assert status[st] == "engine"
+        
+        # Run pipeline
+        s = pipeline.run_engines("C001")
+        
+        # Verify Risk
+        risk = s["risk"]
+        assert risk["stated_risk"] == "aggressive"
+        assert risk["revealed_risk"] == "moderate"
+        assert risk["mismatch"] is True
+        
+        # Verify Plans
+        plans = s["plans"]["plans"]
+        assert len(plans) == 3
+        
+        plan_by_id = {p["plan_id"]: p for p in plans}
+        assert plan_by_id["A"]["monthly_investment"] == 35000
+        assert plan_by_id["B"]["monthly_investment"] == 30000
+        assert plan_by_id["C"]["monthly_investment"] == 52000
+        
+        assert plan_by_id["C"]["feasible"] is False
+        assert plan_by_id["C"]["shortfall"] == 7000
+        assert plan_by_id["C"]["exceeds_risk_ceiling"] is True
+    finally:
+        pipeline.REAL_ENGINES.clear()
+        pipeline.REAL_ENGINES.update(original_real_engines)
+
+
+def test_real_plan_generator_activation():
+    """Activate the real plan generator and ensure it works with the goals passed from the pipeline."""
+    was_real = "plans" in pipeline.REAL_ENGINES
+    pipeline.REAL_ENGINES.add("plans")
+    try:
+        s = run_stages("C001")
+        plans = s["plans"]["plans"]
+        assert len(plans) == 3
+        plan_ids = {p["plan_id"] for p in plans}
+        assert plan_ids == {"A", "B", "C"}
+    finally:
+        if not was_real:
+            pipeline.REAL_ENGINES.discard("plans")
 
 
 def test_features_is_handed_the_profile_the_contract_promises_it():

@@ -209,13 +209,13 @@ def run_engines(customer_id, extra_monthly_savings=0):
     # risk prediction. Today no feature reads the surplus, so the order does not
     # change any number - it stops the day someone adds one.
     features = run("features", customer, profile)
-    risk = run("risk", features)
+    risk = run("risk", features, customer["stated_risk"])
 
     if extra_monthly_savings:
         profile = dict(profile)
         profile["monthly_surplus"] += extra_monthly_savings
 
-    plans = run("plans", profile, risk)
+    plans = run("plans", profile, risk, customer.get("goals", []))
     montecarlo = run("montecarlo", plans)
     stress = run("stress", plans, profile)
     cohort = run("cohort", customer, profile)
