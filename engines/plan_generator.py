@@ -171,7 +171,7 @@ def generate(profile, risk, goals):
             "allocation": alloc_data["allocation"],
             "expected_annual_return": alloc_data["expected_annual_return"],
             "projected_corpus": corpus,
-            "goal_amount": primary_goal["amount"],
+            "goal_amount": primary_goal["target_amount"],
             "years": primary_goal["years"],
             "shortfall": affordability["shortfall"],
             "feasible": affordability["feasible"],

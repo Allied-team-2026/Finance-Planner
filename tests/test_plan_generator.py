@@ -169,7 +169,8 @@ def test_generate_c001_matches_mock():
     # Load inputs
     c001_profile = json.loads(Path("mocks/profile_out.json").read_text())
     c001_risk = json.loads(Path("mocks/risk_out.json").read_text())
-    c001_goals = c001_profile["goals"]
+    c001_raw = json.loads(Path("mocks/customer_C001.json").read_text())
+    c001_goals = c001_raw.get("goals", [])
     
     # Generate
     res = generate(c001_profile, c001_risk, c001_goals)
