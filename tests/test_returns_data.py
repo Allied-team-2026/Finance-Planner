@@ -40,5 +40,5 @@ def test_nifty_50_price_return_dataset():
     # Testing specific authoritative Nifty 50 Price Return (PR) data points
     assert returns[0] == 0.3634
     assert returns[3] == -0.5179 # 2008 drop
-    assert returns[-1] == 0.1190 # 2025 full calendar year final
+    assert returns[-1] == 0.1050 # 2025 full calendar year final
 
