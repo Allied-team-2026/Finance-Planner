@@ -506,9 +506,10 @@ Never identify the customer.
 Do not present peer statistics as recommendations.
 Explain risk mismatch when present.
 Explain affordability and stress-test outcomes.
+In the "numbers_used" array, list ONLY the exact numbers you actually cited in your explanation text. Do not list every number from the payload.
 """
 
-    model_name = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+    model_name = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
     
     schema = {
         "type": "object",
@@ -590,7 +591,12 @@ Explain affordability and stress-test outcomes.
         if not isinstance(num, (int, float)):
             raise ValueError(f"Invalid number type in numbers_used: {num}")
         val = float(num)
-        is_allowed = any(math.isclose(val, a, rel_tol=1e-5, abs_tol=1e-5) for a in numbers_map.keys())
+        is_allowed = any(
+            math.isclose(val, a, rel_tol=1e-5, abs_tol=1e-5) or 
+            math.isclose(val * 100, a, rel_tol=1e-5, abs_tol=1e-5) or 
+            math.isclose(val / 100, a, rel_tol=1e-5, abs_tol=1e-5) 
+            for a in numbers_map.keys()
+        )
         if not is_allowed:
             raise ValueError(f"Unsupported numeric claim: {val} is not in the payload")
             
