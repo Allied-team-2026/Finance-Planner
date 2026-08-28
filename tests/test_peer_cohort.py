@@ -150,3 +150,79 @@ def test_c001_with_real_dataset():
         assert isinstance(res["matched_on"], list)
     else:
         assert res is None
+
+# ------------------------------------------------------------- 3. Statistics
+from engines.peer_cohort import calculate_cohort_statistics
+
+def test_calculate_cohort_statistics_known_5_customer():
+    """Test calculations with a known 5-customer cohort."""
+    matched_customers = [
+        {"monthly_income": 100000, "monthly_surplus": 10000},  # rate: 0.1
+        {"monthly_income": 100000, "monthly_surplus": 20000},  # rate: 0.2
+        {"monthly_income": 100000, "monthly_surplus": 30000},  # rate: 0.3
+        {"monthly_income": 100000, "monthly_surplus": 40000},  # rate: 0.4
+        {"monthly_income": 100000, "monthly_surplus": 50000},  # rate: 0.5
+    ]
+    # Median surplus: 30000, Median rate: 0.3
+    
+    # Below median (0.15) -> strictly less than: 1 (0.1), equal: 0 -> percentile: 1 / 5 = 20.0
+    cust_below = {"monthly_income": 100000, "monthly_surplus": 15000}
+    stats = calculate_cohort_statistics(matched_customers, cust_below)
+    assert stats["median_monthly_surplus"] == 30000
+    assert stats["median_savings_rate"] == 0.3
+    assert stats["customer_savings_rate"] == 0.15
+    assert stats["savings_rate_percentile"] == 20.0
+
+    # At median (0.3) -> strictly less: 2, equal: 1 -> percentile: (2 + 0.5) / 5 = 50.0
+    cust_median = {"monthly_income": 100000, "monthly_surplus": 30000}
+    stats = calculate_cohort_statistics(matched_customers, cust_median)
+    assert stats["savings_rate_percentile"] == 50.0
+
+    # Above median (0.45) -> strictly less: 4, equal: 0 -> percentile: 4 / 5 = 80.0
+    cust_above = {"monthly_income": 100000, "monthly_surplus": 45000}
+    stats = calculate_cohort_statistics(matched_customers, cust_above)
+    assert stats["savings_rate_percentile"] == 80.0
+
+def test_percentile_ties():
+    matched_customers = [
+        {"monthly_income": 100000, "monthly_surplus": 20000},  # 0.2
+        {"monthly_income": 100000, "monthly_surplus": 20000},  # 0.2
+        {"monthly_income": 100000, "monthly_surplus": 20000},  # 0.2
+        {"monthly_income": 100000, "monthly_surplus": 20000},  # 0.2
+    ]
+    # At 0.2: strictly less: 0, equal: 4 -> percentile: (0 + 2) / 4 = 50.0
+    cust = {"monthly_income": 100000, "monthly_surplus": 20000}
+    stats = calculate_cohort_statistics(matched_customers, cust)
+    assert stats["savings_rate_percentile"] == 50.0
+
+def test_c001_savings_rate():
+    matched_customers = [
+        {"monthly_income": 100000, "monthly_surplus": 20000},  # rate 0.2
+    ]
+    c001 = {"monthly_income": 120000, "monthly_surplus": 45000}
+    stats = calculate_cohort_statistics(matched_customers, c001)
+    assert stats["customer_savings_rate"] == 0.375
+
+def test_zero_income_error():
+    cust = {"monthly_income": 0, "monthly_surplus": 0}
+    with pytest.raises(ValueError):
+        calculate_cohort_statistics([{"monthly_income": 100000, "monthly_surplus": 20000}], cust)
+        
+    cust = {"monthly_income": 100000, "monthly_surplus": 20000}
+    with pytest.raises(ValueError):
+        calculate_cohort_statistics([{"monthly_income": 0, "monthly_surplus": 0}], cust)
+
+def test_deterministic_and_no_individual_data_exposed():
+    matched = [{"monthly_income": 100000, "monthly_surplus": 20000}]
+    cust = {"monthly_income": 120000, "monthly_surplus": 45000}
+    stats1 = calculate_cohort_statistics(matched, cust)
+    stats2 = calculate_cohort_statistics(matched, cust)
+    assert stats1 == stats2
+    
+    # Must only contain the 4 requested keys
+    assert set(stats1.keys()) == {
+        "median_monthly_surplus",
+        "median_savings_rate",
+        "customer_savings_rate",
+        "savings_rate_percentile"
+    }

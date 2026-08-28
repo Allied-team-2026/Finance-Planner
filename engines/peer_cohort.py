@@ -93,3 +93,53 @@ def match_cohort(customers, customer, stated_risk):
         }
         
     return None
+
+import statistics
+
+def calculate_cohort_statistics(matched_customers, customer):
+    """
+    Calculate savings and surplus statistics for the cohort.
+    
+    Args:
+        matched_customers (list): The list of matched peer dicts.
+        customer (dict): The target customer's profile dict.
+        
+    Returns:
+        dict: Four numeric cohort outputs.
+    """
+    c_income = customer.get("monthly_income", 0)
+    c_surplus = customer.get("monthly_surplus", 0)
+    
+    if c_income <= 0:
+        raise ValueError("Customer monthly income must be strictly positive.")
+        
+    customer_savings_rate = c_surplus / c_income
+    
+    peer_surpluses = []
+    peer_rates = []
+    
+    for p in matched_customers:
+        p_income = p.get("monthly_income", 0)
+        p_surplus = p.get("monthly_surplus", 0)
+        if p_income <= 0:
+            raise ValueError("Peer monthly income must be strictly positive.")
+            
+        peer_surpluses.append(p_surplus)
+        peer_rates.append(p_surplus / p_income)
+        
+    median_surplus = statistics.median(peer_surpluses)
+    median_rate = statistics.median(peer_rates)
+    
+    # Percentile convention: percentage of peers strictly less than the customer's rate,
+    # plus half the percentage of peers equal to the customer's rate. 
+    # This is standard "rank" percentile which gracefully handles ties and bounds.
+    less_than = sum(1 for r in peer_rates if r < customer_savings_rate)
+    equal_to = sum(1 for r in peer_rates if r == customer_savings_rate)
+    percentile = (less_than + 0.5 * equal_to) / len(peer_rates) * 100
+    
+    return {
+        "median_monthly_surplus": median_surplus,
+        "median_savings_rate": median_rate,
+        "customer_savings_rate": customer_savings_rate,
+        "savings_rate_percentile": percentile
+    }
