@@ -102,7 +102,7 @@ def compare(plans):
     }
 
 
-def build_bundle(customer, profile, features, risk, plans, montecarlo, stress):
+def build_bundle(customer, profile, features, risk, plans, montecarlo, stress, cohort):
     """Section 7. The only payload any agent ever sees.
 
     Identifiers are dropped here and nowhere else, so there is exactly one place
@@ -130,6 +130,7 @@ def build_bundle(customer, profile, features, risk, plans, montecarlo, stress):
         "plans": merged,
         "comparisons": compare(merged),
         "n_simulations": montecarlo["n_simulations"],
+        "peer_cohort": cohort,
     }
 
 
@@ -228,7 +229,7 @@ def run_engines(customer_id, extra_monthly_savings=0):
         "risk": risk, "plans": plans, "montecarlo": montecarlo,
         "stress": stress, "cohort": cohort,
         "bundle": build_bundle(customer, profile, features, risk,
-                               plans, montecarlo, stress),
+                               plans, montecarlo, stress, cohort),
     }
 
 

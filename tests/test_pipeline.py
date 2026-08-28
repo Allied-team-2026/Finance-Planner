@@ -37,7 +37,9 @@ def stages():
 
 def test_bundle_matches_the_mock():
     """Section 7 built from the engine mocks equals mocks/plan_bundle.json."""
-    assert stages()["bundle"] == load_mock("plan_bundle.json")
+    expected = load_mock("plan_bundle.json")
+    expected["peer_cohort"] = load_mock("peer_cohort_out.json")
+    assert stages()["bundle"] == expected
 
 
 def test_response_matches_the_mock():

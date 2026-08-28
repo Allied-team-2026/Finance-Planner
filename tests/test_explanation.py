@@ -11,10 +11,7 @@ def test_explanation_payload_schema_and_privacy():
         s = pipeline.run_engines("C001")
         bundle = s["bundle"]
         
-        # Ensure peer_cohort is in bundle for the test, as it's not currently added by build_bundle
-        if "peer_cohort" not in bundle and "cohort" in s:
-            bundle["peer_cohort"] = s["cohort"]
-            
+        
         payload = build_explanation_payload(bundle)
         
         # 1. Correct payload schema
@@ -47,10 +44,10 @@ def test_null_cohort_handling():
     """Verify payload builder handles missing cohort data safely."""
     bundle = {
         "context": {}, "profile": {}, "risk": {}, "goals": [], "plans": [],
-        "comparisons": {}, "n_simulations": 10000
+        "comparisons": {}, "n_simulations": 10000, "peer_cohort": None
     }
     payload = build_explanation_payload(bundle)
-    assert "peer_cohort" not in payload
+    assert payload["peer_cohort"] is None
     assert payload["n_simulations"] == 10000
 
 def test_determinism():

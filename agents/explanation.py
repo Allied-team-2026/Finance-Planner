@@ -388,12 +388,8 @@ def build_explanation_payload(bundle):
         "plans": bundle.get("plans", []),
         "comparisons": bundle.get("comparisons", {}),
         "n_simulations": bundle.get("n_simulations"),
+        "peer_cohort": bundle.get("peer_cohort")
     }
-    
-    if "cohort" in bundle:
-        payload["peer_cohort"] = bundle["cohort"]
-    elif "peer_cohort" in bundle:
-        payload["peer_cohort"] = bundle["peer_cohort"]
         
     forbidden_keys = {
         "customer_id", "name", "customer_name", "account_numbers", 
