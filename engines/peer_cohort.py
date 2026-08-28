@@ -92,6 +92,11 @@ def match_cohort(customers, customer, stated_risk):
 import statistics
 from engines.profile import build_profile
 
+from engines.features import extract
+from models.risk_model import predict
+from engines.plan_generator import generate
+import json
+
 def calculate_cohort_statistics(matched_customers, customer_profile):
     """
     Calculate savings and surplus statistics for the cohort.
@@ -101,7 +106,7 @@ def calculate_cohort_statistics(matched_customers, customer_profile):
         customer_profile (dict): The target customer's profile dict.
         
     Returns:
-        dict: Four numeric cohort outputs.
+        dict: Six numeric cohort outputs.
     """
     c_income = customer_profile["monthly_income"]
     c_surplus = customer_profile["monthly_surplus"]
@@ -114,6 +119,15 @@ def calculate_cohort_statistics(matched_customers, customer_profile):
     peer_surpluses = []
     peer_rates = []
     
+    plan_counts = {}
+    plan_allocations = {}
+    
+    plan_id_map = {
+        "conservative": "A",
+        "moderate": "B",
+        "aggressive": "C"
+    }
+    
     for p in matched_customers:
         p_profile = build_profile(p)
         p_income = p_profile["monthly_income"]
@@ -124,6 +138,30 @@ def calculate_cohort_statistics(matched_customers, customer_profile):
         peer_surpluses.append(p_surplus)
         peer_rates.append(p_surplus / p_income)
         
+        # Determine plan choice
+        stated_risk = p["stated_risk"]
+        features = extract(p, p_profile)
+        risk_output = predict(features, stated_risk)
+        revealed_risk = risk_output["revealed_risk"]
+        
+        plans_data = generate(p_profile, risk_output, p.get("goals", []))
+        
+        # Peer picks plan corresponding to their stated risk
+        target_pid = plan_id_map.get(stated_risk, "B")
+        chosen_plan = next((pl for pl in plans_data["plans"] if pl["plan_id"] == target_pid), None)
+        
+        if chosen_plan:
+            label = chosen_plan["label"]
+            alloc_str = json.dumps(chosen_plan["allocation"], sort_keys=True)
+            
+            if label not in plan_counts:
+                plan_counts[label] = {"count": 0, "pid": target_pid}
+            plan_counts[label]["count"] += 1
+            
+            if label not in plan_allocations:
+                plan_allocations[label] = {}
+            plan_allocations[label][alloc_str] = plan_allocations[label].get(alloc_str, 0) + 1
+            
     median_surplus = statistics.median(peer_surpluses)
     median_rate = statistics.median(peer_rates)
     
@@ -131,15 +169,28 @@ def calculate_cohort_statistics(matched_customers, customer_profile):
     equal_to = sum(1 for r in peer_rates if r == customer_savings_rate)
     percentile = (less_than + 0.5 * equal_to) / len(peer_rates) * 100
     
+    most_common_label = None
+    most_common_allocation = None
+    
+    if plan_counts:
+        # Sort by count desc, then by pid asc
+        sorted_plans = sorted(plan_counts.items(), key=lambda x: (-x[1]["count"], x[1]["pid"]))
+        most_common_label = sorted_plans[0][0]
+        
+        # Most common allocation for this plan label
+        allocs = plan_allocations[most_common_label]
+        # Sort by count desc, then string repr asc
+        sorted_allocs = sorted(allocs.items(), key=lambda x: (-x[1], x[0]))
+        most_common_allocation = json.loads(sorted_allocs[0][0])
+    
     return {
         "median_monthly_surplus": median_surplus,
         "median_savings_rate": median_rate,
         "customer_savings_rate": customer_savings_rate,
-        "savings_rate_percentile": percentile
+        "savings_rate_percentile": percentile,
+        "most_common_plan_label": most_common_label,
+        "most_common_allocation": most_common_allocation
     }
-
-from engines.features import extract
-from models.risk_model import predict
 
 def calculate_mismatch_rate(matched_customers):
     """

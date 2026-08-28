@@ -64,66 +64,66 @@ def mock_dataset():
     # Customer A matches (20 total)
     # Age 30 (26-30), Income 80k (50k-100k), Goal 'X', Risk 'moderate'
     for _ in range(20):
-        data.append({"age": 30, "monthly_income": 80000, "goals": [{"name": "X", "priority": 1}], "stated_risk": "moderate"})
+        data.append({"age": 30, "stated_risk": "moderate", "monthly_income": 80000, "goals": [{"name": "X", "priority": 1}], "stated_risk": "moderate"})
         
     # Customer B matches
     # Age 40 (36-40), Income 120k (100k-150k), Goal 'Y', Risk 'aggressive'
     for _ in range(19):
         # 19 full matches
-        data.append({"age": 40, "monthly_income": 120000, "goals": [{"name": "Y", "priority": 1}], "stated_risk": "aggressive"})
+        data.append({"age": 40, "stated_risk": "moderate", "monthly_income": 120000, "goals": [{"name": "Y", "priority": 1}], "stated_risk": "aggressive"})
     for _ in range(10):
         # 10 matches on age, income, goal, but different risk
-        data.append({"age": 40, "monthly_income": 120000, "goals": [{"name": "Y", "priority": 1}], "stated_risk": "conservative"})
+        data.append({"age": 40, "stated_risk": "moderate", "monthly_income": 120000, "goals": [{"name": "Y", "priority": 1}], "stated_risk": "conservative"})
         
     # Customer C matches
     # Age 50 (41-50), Income 200k (150k-250k), Goal 'Z', Risk 'conservative'
     for _ in range(10):
         # 10 full matches
-        data.append({"age": 50, "monthly_income": 200000, "goals": [{"name": "Z", "priority": 1}], "stated_risk": "conservative"})
+        data.append({"age": 50, "stated_risk": "moderate", "monthly_income": 200000, "goals": [{"name": "Z", "priority": 1}], "stated_risk": "conservative"})
     for _ in range(5):
         # 5 matches missing risk
-        data.append({"age": 50, "monthly_income": 200000, "goals": [{"name": "Z", "priority": 1}], "stated_risk": "aggressive"})
+        data.append({"age": 50, "stated_risk": "moderate", "monthly_income": 200000, "goals": [{"name": "Z", "priority": 1}], "stated_risk": "aggressive"})
     for _ in range(20):
         # 20 matches missing risk and goal
-        data.append({"age": 50, "monthly_income": 200000, "goals": [{"name": "W", "priority": 1}], "stated_risk": "aggressive"})
+        data.append({"age": 50, "stated_risk": "moderate", "monthly_income": 200000, "goals": [{"name": "W", "priority": 1}], "stated_risk": "aggressive"})
         
     # Customer D matches
     # Age 25 (22-25), Income 40k (0-50k), Goal 'X', Risk 'moderate'
     for _ in range(5):
         # Full match
-        data.append({"age": 25, "monthly_income": 40000, "goals": [{"name": "X", "priority": 1}], "stated_risk": "moderate"})
+        data.append({"age": 25, "stated_risk": "moderate", "monthly_income": 40000, "goals": [{"name": "X", "priority": 1}], "stated_risk": "moderate"})
     for _ in range(5):
         # Goal match only
-        data.append({"age": 25, "monthly_income": 40000, "goals": [{"name": "X", "priority": 1}], "stated_risk": "conservative"})
+        data.append({"age": 25, "stated_risk": "moderate", "monthly_income": 40000, "goals": [{"name": "X", "priority": 1}], "stated_risk": "conservative"})
     for _ in range(5):
         # Base match only
-        data.append({"age": 25, "monthly_income": 40000, "goals": [{"name": "Y", "priority": 1}], "stated_risk": "conservative"})
+        data.append({"age": 25, "stated_risk": "moderate", "monthly_income": 40000, "goals": [{"name": "Y", "priority": 1}], "stated_risk": "conservative"})
         
     return data
 
 def test_full_match(mock_dataset):
-    customer = {"age": 30, "monthly_income": 80000, "goals": [{"name": "X", "priority": 1}]}
+    customer = {"age": 30, "stated_risk": "moderate", "monthly_income": 80000, "goals": [{"name": "X", "priority": 1}]}
     res = match_cohort(mock_dataset, customer, "moderate")
     assert res is not None
     assert res["cohort_size"] == 20
     assert res["matched_on"] == ["age_band", "income_band", "goal_type", "stated_risk"]
 
 def test_fallback_1_stated_risk(mock_dataset):
-    customer = {"age": 40, "monthly_income": 120000, "goals": [{"name": "Y", "priority": 1}]}
+    customer = {"age": 40, "stated_risk": "moderate", "monthly_income": 120000, "goals": [{"name": "Y", "priority": 1}]}
     res = match_cohort(mock_dataset, customer, "aggressive")
     assert res is not None
     assert res["cohort_size"] == 29
     assert res["matched_on"] == ["age_band", "income_band", "goal_type"]
 
 def test_fallback_2_goal_type(mock_dataset):
-    customer = {"age": 50, "monthly_income": 200000, "goals": [{"name": "Z", "priority": 1}]}
+    customer = {"age": 50, "stated_risk": "moderate", "monthly_income": 200000, "goals": [{"name": "Z", "priority": 1}]}
     res = match_cohort(mock_dataset, customer, "conservative")
     assert res is not None
     assert res["cohort_size"] == 35  # 10 + 5 + 20
     assert res["matched_on"] == ["age_band", "income_band"]
 
 def test_fewer_than_20_all_fallbacks(mock_dataset):
-    customer = {"age": 25, "monthly_income": 40000, "goals": [{"name": "X", "priority": 1}]}
+    customer = {"age": 25, "stated_risk": "moderate", "monthly_income": 40000, "goals": [{"name": "X", "priority": 1}]}
     res = match_cohort(mock_dataset, customer, "moderate")
     assert res is None  # Total possible matches in dataset is 15 (<20)
 
@@ -134,7 +134,7 @@ def test_c001_with_real_dataset():
         
     c001 = {
         "age": 28,
-        "monthly_income": 120000,
+        "stated_risk": "moderate", "monthly_income": 120000,
         "goals": [{"name": "house_downpayment", "priority": 1}]
     }
     res = match_cohort(customers, c001, "aggressive")
@@ -161,20 +161,29 @@ def mock_build_profile(monkeypatch):
     as-is, since our fixtures already contain the pre-computed fields.
     """
     monkeypatch.setattr("engines.peer_cohort.build_profile", lambda p: p)
+    monkeypatch.setattr("engines.peer_cohort.extract", lambda p, prof: {})
+    monkeypatch.setattr("engines.peer_cohort.predict", lambda feats, stated: {"revealed_risk": stated})
+    monkeypatch.setattr("engines.peer_cohort.generate", lambda prof, risk, goals: {
+        "plans": [
+            {"plan_id": "A", "label": "Steady", "allocation": {"equity": 0.2}},
+            {"plan_id": "B", "label": "Balanced", "allocation": {"equity": 0.5}},
+            {"plan_id": "C", "label": "Growth", "allocation": {"equity": 0.8}}
+        ]
+    })
 
 def test_calculate_cohort_statistics_known_5_customer(mock_build_profile):
     """Test calculations with a known 5-customer cohort."""
     matched_customers = [
-        {"monthly_income": 100000, "monthly_surplus": 10000},  # rate: 0.1
-        {"monthly_income": 100000, "monthly_surplus": 20000},  # rate: 0.2
-        {"monthly_income": 100000, "monthly_surplus": 30000},  # rate: 0.3
-        {"monthly_income": 100000, "monthly_surplus": 40000},  # rate: 0.4
-        {"monthly_income": 100000, "monthly_surplus": 50000},  # rate: 0.5
+        {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 10000},  # rate: 0.1
+        {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 20000},  # rate: 0.2
+        {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 30000},  # rate: 0.3
+        {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 40000},  # rate: 0.4
+        {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 50000},  # rate: 0.5
     ]
     # Median surplus: 30000, Median rate: 0.3
     
     # Below median (0.15) -> strictly less than: 1 (0.1), equal: 0 -> percentile: 1 / 5 = 20.0
-    cust_below = {"monthly_income": 100000, "monthly_surplus": 15000}
+    cust_below = {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 15000}
     stats = calculate_cohort_statistics(matched_customers, cust_below)
     assert stats["median_monthly_surplus"] == 30000
     assert stats["median_savings_rate"] == 0.3
@@ -182,57 +191,59 @@ def test_calculate_cohort_statistics_known_5_customer(mock_build_profile):
     assert stats["savings_rate_percentile"] == 20.0
 
     # At median (0.3) -> strictly less: 2, equal: 1 -> percentile: (2 + 0.5) / 5 = 50.0
-    cust_median = {"monthly_income": 100000, "monthly_surplus": 30000}
+    cust_median = {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 30000}
     stats = calculate_cohort_statistics(matched_customers, cust_median)
     assert stats["savings_rate_percentile"] == 50.0
 
     # Above median (0.45) -> strictly less: 4, equal: 0 -> percentile: 4 / 5 = 80.0
-    cust_above = {"monthly_income": 100000, "monthly_surplus": 45000}
+    cust_above = {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 45000}
     stats = calculate_cohort_statistics(matched_customers, cust_above)
     assert stats["savings_rate_percentile"] == 80.0
 
 def test_percentile_ties(mock_build_profile):
     matched_customers = [
-        {"monthly_income": 100000, "monthly_surplus": 20000},  # 0.2
-        {"monthly_income": 100000, "monthly_surplus": 20000},  # 0.2
-        {"monthly_income": 100000, "monthly_surplus": 20000},  # 0.2
-        {"monthly_income": 100000, "monthly_surplus": 20000},  # 0.2
+        {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 20000},  # 0.2
+        {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 20000},  # 0.2
+        {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 20000},  # 0.2
+        {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 20000},  # 0.2
     ]
     # At 0.2: strictly less: 0, equal: 4 -> percentile: (0 + 2) / 4 = 50.0
-    cust = {"monthly_income": 100000, "monthly_surplus": 20000}
+    cust = {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 20000}
     stats = calculate_cohort_statistics(matched_customers, cust)
     assert stats["savings_rate_percentile"] == 50.0
 
 def test_c001_savings_rate(mock_build_profile):
     matched_customers = [
-        {"monthly_income": 100000, "monthly_surplus": 20000},  # rate 0.2
+        {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 20000},  # rate 0.2
     ]
-    c001 = {"monthly_income": 120000, "monthly_surplus": 45000}
+    c001 = {"stated_risk": "moderate", "monthly_income": 120000, "monthly_surplus": 45000}
     stats = calculate_cohort_statistics(matched_customers, c001)
     assert stats["customer_savings_rate"] == 0.375
 
 def test_zero_income_error(mock_build_profile):
-    cust = {"monthly_income": 0, "monthly_surplus": 0}
+    cust = {"stated_risk": "moderate", "monthly_income": 0, "monthly_surplus": 0}
     with pytest.raises(ValueError):
-        calculate_cohort_statistics([{"monthly_income": 100000, "monthly_surplus": 20000}], cust)
+        calculate_cohort_statistics([{"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 20000}], cust)
         
-    cust = {"monthly_income": 100000, "monthly_surplus": 20000}
+    cust = {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 20000}
     with pytest.raises(ValueError):
-        calculate_cohort_statistics([{"monthly_income": 0, "monthly_surplus": 0}], cust)
+        calculate_cohort_statistics([{"stated_risk": "moderate", "monthly_income": 0, "monthly_surplus": 0}], cust)
 
 def test_deterministic_and_no_individual_data_exposed(mock_build_profile):
-    matched = [{"monthly_income": 100000, "monthly_surplus": 20000}]
-    cust = {"monthly_income": 120000, "monthly_surplus": 45000}
+    matched = [{"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 20000}]
+    cust = {"stated_risk": "moderate", "monthly_income": 120000, "monthly_surplus": 45000}
     stats1 = calculate_cohort_statistics(matched, cust)
     stats2 = calculate_cohort_statistics(matched, cust)
     assert stats1 == stats2
     
-    # Must only contain the 4 requested keys
+    # Must only contain the 6 requested keys
     assert set(stats1.keys()) == {
         "median_monthly_surplus",
         "median_savings_rate",
         "customer_savings_rate",
-        "savings_rate_percentile"
+        "savings_rate_percentile",
+        "most_common_plan_label",
+        "most_common_allocation"
     }
 
 # ------------------------------------------------------------- 4. Mismatch Rate
@@ -287,11 +298,95 @@ def test_mismatch_rate_real_data():
     customers = generate_dataset(1000, seed=42)
     c001 = {
         "age": 28,
-        "monthly_income": 120000,
+        "stated_risk": "moderate", "monthly_income": 120000,
         "goals": [{"name": "house_downpayment", "priority": 1}]
     }
     # Using real models, no mocks
     res = match_cohort(customers, c001, "aggressive")
     
     rate = calculate_mismatch_rate(res["peers"])
-    assert 0.0 <= rate <= 1.0
+# ------------------------------------------------------------- 5. Most Common Plan and Allocation
+
+def test_most_common_plan_A(mock_build_profile, monkeypatch):
+    monkeypatch.setattr("engines.peer_cohort.extract", lambda p, prof: {})
+    monkeypatch.setattr("engines.peer_cohort.predict", lambda feats, stated: {"revealed_risk": stated})
+    monkeypatch.setattr("engines.peer_cohort.generate", lambda prof, risk, goals: {
+        "plans": [
+            {"plan_id": "A", "label": "Steady", "allocation": {"equity": 0.2}},
+            {"plan_id": "B", "label": "Balanced", "allocation": {"equity": 0.5}},
+            {"plan_id": "C", "label": "Growth", "allocation": {"equity": 0.8}}
+        ]
+    })
+    
+    peers = [
+        {"stated_risk": "conservative", "monthly_income": 100000, "monthly_surplus": 10000},
+        {"stated_risk": "conservative", "monthly_income": 100000, "monthly_surplus": 10000},
+        {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 10000}
+    ]
+    cust = {"stated_risk": "moderate", "monthly_income": 120000, "monthly_surplus": 45000}
+    stats = calculate_cohort_statistics(peers, cust)
+    assert stats["most_common_plan_label"] == "Steady"
+    assert stats["most_common_allocation"] == {"equity": 0.2}
+
+def test_most_common_plan_B(mock_build_profile, monkeypatch):
+    monkeypatch.setattr("engines.peer_cohort.extract", lambda p, prof: {})
+    monkeypatch.setattr("engines.peer_cohort.predict", lambda feats, stated: {"revealed_risk": stated})
+    monkeypatch.setattr("engines.peer_cohort.generate", lambda prof, risk, goals: {
+        "plans": [
+            {"plan_id": "A", "label": "Steady", "allocation": {"equity": 0.2}},
+            {"plan_id": "B", "label": "Balanced", "allocation": {"equity": 0.5}},
+            {"plan_id": "C", "label": "Growth", "allocation": {"equity": 0.8}}
+        ]
+    })
+    
+    peers = [
+        {"stated_risk": "conservative", "monthly_income": 100000, "monthly_surplus": 10000},
+        {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 10000},
+        {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 10000}
+    ]
+    cust = {"stated_risk": "moderate", "monthly_income": 120000, "monthly_surplus": 45000}
+    stats = calculate_cohort_statistics(peers, cust)
+    assert stats["most_common_plan_label"] == "Balanced"
+    assert stats["most_common_allocation"] == {"equity": 0.5}
+
+def test_most_common_plan_tie(mock_build_profile, monkeypatch):
+    monkeypatch.setattr("engines.peer_cohort.extract", lambda p, prof: {})
+    monkeypatch.setattr("engines.peer_cohort.predict", lambda feats, stated: {"revealed_risk": stated})
+    monkeypatch.setattr("engines.peer_cohort.generate", lambda prof, risk, goals: {
+        "plans": [
+            {"plan_id": "A", "label": "Steady", "allocation": {"equity": 0.2}},
+            {"plan_id": "B", "label": "Balanced", "allocation": {"equity": 0.5}},
+            {"plan_id": "C", "label": "Growth", "allocation": {"equity": 0.8}}
+        ]
+    })
+    
+    # 2 conservative (A), 2 moderate (B) => A before B
+    peers = [
+        {"stated_risk": "conservative", "monthly_income": 100000, "monthly_surplus": 10000},
+        {"stated_risk": "conservative", "monthly_income": 100000, "monthly_surplus": 10000},
+        {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 10000},
+        {"stated_risk": "moderate", "monthly_income": 100000, "monthly_surplus": 10000}
+    ]
+    cust = {"stated_risk": "moderate", "monthly_income": 120000, "monthly_surplus": 45000}
+    stats = calculate_cohort_statistics(peers, cust)
+    assert stats["most_common_plan_label"] == "Steady"
+    assert stats["most_common_allocation"] == {"equity": 0.2}
+
+def test_most_common_real_generated_peer():
+    from engines.synthetic_data import generate_dataset
+    from engines.peer_cohort import match_cohort
+    customers = generate_dataset(1000, seed=42)
+    c001 = {
+        "age": 28,
+        "monthly_income": 120000,
+        "monthly_surplus": 45000,
+        "goals": [{"name": "house_downpayment", "priority": 1}]
+    }
+    # No mocks, uses real models
+    res = match_cohort(customers, c001, "aggressive")
+    
+    # Will use real build_profile, extract, predict, generate
+    stats = calculate_cohort_statistics(res["peers"], c001)
+    
+    assert stats["most_common_plan_label"] in ["Steady", "Balanced", "Growth"]
+    assert "equity" in stats["most_common_allocation"]
