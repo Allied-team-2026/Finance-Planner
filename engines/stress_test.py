@@ -51,3 +51,57 @@ def evaluate_combination(plan, events):
             "breaking_probability": round(prob, 6),
             "shortfall_if_hit": goal - effective_corpus,
         }
+
+
+import itertools
+
+def search_combinations(plan, events):
+    """Enumerate all 2-event and 3-event combinations to find the cheapest failure.
+
+    'Cheapest' is defined as the combination that causes failure with the smallest
+    absolute cash impact (i.e. the highest/least-negative total impact).
+
+    Args:
+        plan: the Plan Generator output plan object.
+        events: the complete list of shock events from the library.
+
+    Returns:
+        dict with survives, breaking_combo, breaking_probability,
+        shortfall_if_hit, and combos_tested.
+    """
+    combos_tested = 0
+    failing_results = []
+
+    # Evaluate 2-event combinations
+    for combo in itertools.combinations(events, 2):
+        combos_tested += 1
+        res = evaluate_combination(plan, list(combo))
+        if not res["survives"]:
+            failing_results.append(res)
+
+    # Evaluate 3-event combinations
+    for combo in itertools.combinations(events, 3):
+        combos_tested += 1
+        res = evaluate_combination(plan, list(combo))
+        if not res["survives"]:
+            failing_results.append(res)
+
+    if failing_results:
+        # Sort by total cash impact descending (closest to zero / least negative)
+        # to find the "cheapest" combination that breaks the plan.
+        failing_results.sort(
+            key=lambda r: sum(e["cash_impact"] for e in r["breaking_combo"]),
+            reverse=True
+        )
+        cheapest = failing_results[0]
+        cheapest["combos_tested"] = combos_tested
+        return cheapest
+    else:
+        return {
+            "survives": True,
+            "breaking_combo": None,
+            "breaking_probability": None,
+            "shortfall_if_hit": None,
+            "combos_tested": combos_tested,
+        }
+
