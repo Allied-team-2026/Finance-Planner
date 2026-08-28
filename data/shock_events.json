@@ -1,0 +1,20 @@
+[
+  {
+    "event_id": "appraisal_miss",
+    "label": "Appraisal comes in at 4% instead of 10%",
+    "annual_probability": 0.23,
+    "cash_impact": -180000
+  },
+  {
+    "event_id": "medical_expense",
+    "label": "Family medical expense",
+    "annual_probability": 0.10,
+    "cash_impact": -200000
+  },
+  {
+    "event_id": "rent_hike",
+    "label": "Landlord raises rent by 15%",
+    "annual_probability": 0.30,
+    "cash_impact": -120000
+  }
+]
