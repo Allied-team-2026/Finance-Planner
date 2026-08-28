@@ -16,7 +16,7 @@ DATA_PATH = ROOT / "data" / "shock_events.json"
 
 REQUIRED_FIELDS = {"event_id", "label", "annual_probability", "cash_impact"}
 
-REQUIRED_EVENT_IDS = {"appraisal_miss", "medical_expense", "rent_hike"}
+REQUIRED_EVENT_IDS = {"appraisal_miss", "medical_expense", "rent_hike", "job_loss_3m"}
 
 
 def _load():
@@ -35,15 +35,15 @@ def test_valid_json():
     assert isinstance(events, list)
 
 
-def test_exactly_three_events():
+def test_exactly_ten_events():
     events = _load()
-    assert len(events) == 3
+    assert len(events) == 10
 
 
 def test_required_event_ids_present():
     events = _load()
     ids = {e["event_id"] for e in events}
-    assert ids == REQUIRED_EVENT_IDS
+    assert REQUIRED_EVENT_IDS.issubset(ids)
 
 
 def test_event_ids_unique():
@@ -129,3 +129,17 @@ def test_deterministic_load():
     a = _load()
     b = _load()
     assert a == b
+
+
+import math
+
+def test_combination_count_is_165():
+    """Prove that C(10,2) + C(10,3) = 165"""
+    events = _load()
+    n = len(events)
+    assert n == 10
+    c_2 = math.comb(n, 2)
+    c_3 = math.comb(n, 3)
+    assert c_2 == 45
+    assert c_3 == 120
+    assert c_2 + c_3 == 165

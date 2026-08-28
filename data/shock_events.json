@@ -16,5 +16,47 @@
     "label": "Landlord raises rent by 15%",
     "annual_probability": 0.30,
     "cash_impact": -120000
+  },
+  {
+    "event_id": "job_loss_3m",
+    "label": "Job loss for 3 months",
+    "annual_probability": 0.04,
+    "cash_impact": -360000
+  },
+  {
+    "event_id": "car_repair",
+    "label": "Unexpected major vehicle repair",
+    "annual_probability": 0.15,
+    "cash_impact": -50000
+  },
+  {
+    "event_id": "appliance_failure",
+    "label": "Refrigerator or AC replacement",
+    "annual_probability": 0.20,
+    "cash_impact": -40000
+  },
+  {
+    "event_id": "parent_support",
+    "label": "Emergency financial support for parents",
+    "annual_probability": 0.10,
+    "cash_impact": -100000
+  },
+  {
+    "event_id": "home_repair",
+    "label": "Urgent plumbing or roof repair",
+    "annual_probability": 0.12,
+    "cash_impact": -75000
+  },
+  {
+    "event_id": "tax_demand",
+    "label": "Unexpected income tax demand",
+    "annual_probability": 0.05,
+    "cash_impact": -60000
+  },
+  {
+    "event_id": "school_fee_hike",
+    "label": "Unexpected private school fee hike",
+    "annual_probability": 0.18,
+    "cash_impact": -80000
   }
 ]
