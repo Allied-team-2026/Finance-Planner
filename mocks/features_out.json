@@ -1,0 +1,8 @@
+{
+  "panic_sell_count": 2,
+  "avg_days_to_exit_after_drop": 3.25,
+  "expense_volatility": 0.3418,
+  "emergency_fund_months": 0.65,
+  "equity_allocation_pct": 0.5284,
+  "budget_overshoot_rate": 0.4167
+}

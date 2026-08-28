@@ -1,0 +1,65 @@
+{
+  "customer_id": "C001",
+  "age": 28,
+  "stated_risk": "aggressive",
+  "monthly_income": 120000,
+  "assets": {
+    "savings_account": 300000,
+    "equity_mf": 400000,
+    "fixed_deposit": 100000
+  },
+  "liabilities": [
+    {
+      "type": "car_loan",
+      "outstanding": 200000,
+      "emi": 8000
+    }
+  ],
+  "transactions": [
+    { "date": "2024-09-05", "category": "rent", "amount": 25000 },
+    { "date": "2024-09-12", "category": "groceries", "amount": 11500 },
+    { "date": "2024-09-18", "category": "dining", "amount": 6200 },
+    { "date": "2024-10-05", "category": "rent", "amount": 25000 },
+    { "date": "2024-10-14", "category": "shopping", "amount": 22400 },
+    { "date": "2024-10-20", "category": "utilities", "amount": 4800 },
+    { "date": "2024-11-05", "category": "rent", "amount": 25000 },
+    { "date": "2024-11-15", "category": "groceries", "amount": 13100 },
+    { "date": "2024-12-05", "category": "rent", "amount": 25000 },
+    { "date": "2024-12-22", "category": "entertainment", "amount": 18500 },
+    { "date": "2025-01-05", "category": "rent", "amount": 25000 },
+    { "date": "2025-01-16", "category": "groceries", "amount": 12400 },
+    { "date": "2025-02-05", "category": "rent", "amount": 25000 },
+    { "date": "2025-02-18", "category": "dining", "amount": 9300 },
+    { "date": "2025-03-05", "category": "rent", "amount": 25000 },
+    { "date": "2025-03-14", "category": "shopping", "amount": 31200 },
+    { "date": "2025-04-05", "category": "rent", "amount": 25000 },
+    { "date": "2025-04-12", "category": "transport", "amount": 7500 },
+    { "date": "2025-05-05", "category": "rent", "amount": 25000 },
+    { "date": "2025-05-19", "category": "groceries", "amount": 14200 },
+    { "date": "2025-06-05", "category": "rent", "amount": 25000 },
+    { "date": "2025-06-25", "category": "health", "amount": 16800 },
+    { "date": "2025-07-05", "category": "rent", "amount": 25000 },
+    { "date": "2025-07-16", "category": "groceries", "amount": 12800 },
+    { "date": "2025-08-05", "category": "rent", "amount": 25000 },
+    { "date": "2025-08-20", "category": "dining", "amount": 8400 }
+  ],
+  "investment_events": [
+    {
+      "date": "2024-03-12",
+      "action": "sell",
+      "instrument": "equity_mf",
+      "amount": 150000,
+      "market_drawdown_pct": 9.0,
+      "days_after_drop": 3.0
+    },
+    {
+      "date": "2024-08-05",
+      "action": "sell",
+      "instrument": "equity_mf",
+      "amount": 80000,
+      "market_drawdown_pct": 6.5,
+      "days_after_drop": 3.5
+    }
+  ],
+  "ground_truth_risk": "moderate"
+}

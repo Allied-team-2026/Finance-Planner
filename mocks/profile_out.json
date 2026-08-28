@@ -1,0 +1,18 @@
+{
+  "net_worth": 600000,
+  "total_assets": 800000,
+  "total_liabilities": 200000,
+  "monthly_income": 120000,
+  "monthly_expense": 75000,
+  "monthly_surplus": 45000,
+  "existing_emi_total": 8000,
+  "emergency_fund_months": 4.0,
+  "expense_breakdown": {
+    "rent": 25000,
+    "groceries": 12000,
+    "emi": 8000,
+    "transport": 6000,
+    "dining": 5000,
+    "misc": 19000
+  }
+}
