@@ -234,3 +234,64 @@ def test_deterministic_and_no_individual_data_exposed(mock_build_profile):
         "customer_savings_rate",
         "savings_rate_percentile"
     }
+
+# ------------------------------------------------------------- 4. Mismatch Rate
+from engines.peer_cohort import calculate_mismatch_rate
+
+@pytest.fixture
+def mock_for_mismatch(monkeypatch, mock_build_profile):
+    monkeypatch.setattr("engines.peer_cohort.extract", lambda p, prof: {})
+    # Use a magic key '_revealed' on the peer to dictate the mock predict output
+    monkeypatch.setattr("engines.peer_cohort.predict", lambda feats, stated: {"revealed_risk": feats.get("_revealed", stated)})
+    # To pass _revealed through extract:
+    monkeypatch.setattr("engines.peer_cohort.extract", lambda p, prof: {"_revealed": p.get("_revealed", stated_risk_from_p(p))})
+    
+    def stated_risk_from_p(p):
+        return p.get("stated_risk", "moderate")
+        
+def test_mismatch_rate_zero(mock_for_mismatch):
+    # All peers have stated == revealed
+    peers = [
+        {"stated_risk": "moderate", "_revealed": "moderate"},
+        {"stated_risk": "aggressive", "_revealed": "aggressive"},
+    ]
+    assert calculate_mismatch_rate(peers) == 0.0
+
+def test_mismatch_rate_all(mock_for_mismatch):
+    # All peers mismatch
+    peers = [
+        {"stated_risk": "moderate", "_revealed": "aggressive"},
+        {"stated_risk": "conservative", "_revealed": "moderate"},
+    ]
+    assert calculate_mismatch_rate(peers) == 1.0
+
+def test_mismatch_rate_mixed(mock_for_mismatch):
+    # 2 mismatch, 3 match -> 2/5 = 0.4
+    peers = [
+        {"stated_risk": "moderate", "_revealed": "aggressive"},  # mismatch
+        {"stated_risk": "conservative", "_revealed": "moderate"}, # mismatch
+        {"stated_risk": "aggressive", "_revealed": "aggressive"}, # match
+        {"stated_risk": "conservative", "_revealed": "conservative"}, # match
+        {"stated_risk": "moderate", "_revealed": "moderate"}, # match
+    ]
+    assert calculate_mismatch_rate(peers) == 0.4
+    
+def test_mismatch_rate_empty():
+    with pytest.raises(ValueError):
+        calculate_mismatch_rate([])
+
+def test_mismatch_rate_real_data():
+    from engines.synthetic_data import generate_dataset
+    from engines.peer_cohort import match_cohort
+    customers = generate_dataset(100, seed=42)  # smaller subset for speed is fine, but let's use 1000
+    customers = generate_dataset(1000, seed=42)
+    c001 = {
+        "age": 28,
+        "monthly_income": 120000,
+        "goals": [{"name": "house_downpayment", "priority": 1}]
+    }
+    # Using real models, no mocks
+    res = match_cohort(customers, c001, "aggressive")
+    
+    rate = calculate_mismatch_rate(res["peers"])
+    assert 0.0 <= rate <= 1.0

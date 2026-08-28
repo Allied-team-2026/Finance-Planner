@@ -137,3 +137,26 @@ def calculate_cohort_statistics(matched_customers, customer_profile):
         "customer_savings_rate": customer_savings_rate,
         "savings_rate_percentile": percentile
     }
+
+from engines.features import extract
+from models.risk_model import predict
+
+def calculate_mismatch_rate(matched_customers):
+    """
+    Calculate the fraction of matched cohort customers whose stated risk 
+    differs from their revealed risk.
+    """
+    num_peers = len(matched_customers)
+    if num_peers == 0:
+        raise ValueError("Cannot calculate mismatch rate for an empty cohort.")
+        
+    mismatches = 0
+    for peer in matched_customers:
+        stated = peer["stated_risk"]
+        p_profile = build_profile(peer)
+        features = extract(peer, p_profile)
+        revealed = predict(features, stated)["revealed_risk"]
+        if stated != revealed:
+            mismatches += 1
+            
+    return mismatches / num_peers
