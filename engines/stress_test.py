@@ -105,3 +105,56 @@ def search_combinations(plan, events):
             "combos_tested": combos_tested,
         }
 
+import json
+from pathlib import Path
+
+# Module-level constant for the event library path
+SHOCKS_PATH = Path(__file__).resolve().parent.parent / "data" / "shock_events.json"
+
+
+def load_events():
+    """Load the complete shock event library."""
+    with open(SHOCKS_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def run(plan_generator_output):
+    """
+    Public API for the Stress Test engine.
+
+    Args:
+        plan_generator_output: The complete JSON output from the Plan Generator,
+                               containing a list of plans under the "plans" key.
+    
+    Returns:
+        dict: A "results" object mapping the stress test outcome per plan_id.
+    """
+    events = load_events()
+    
+    # We must support exactly 165 combinations if it's the 10-event library
+    # The helper `search_combinations` already handles combinations natively.
+    
+    results = []
+    plans = plan_generator_output.get("plans", [])
+    
+    for plan in plans:
+        # evaluate the combinations
+        combo_res = search_combinations(plan, events)
+        
+        # build the required structure for this plan
+        res_obj = {
+            "plan_id": plan["plan_id"],
+            "survives": combo_res["survives"],
+            "breaking_combo": combo_res["breaking_combo"],
+            "breaking_probability": combo_res["breaking_probability"],
+            "shortfall_if_hit": combo_res["shortfall_if_hit"],
+            "combos_tested": combo_res["combos_tested"]
+        }
+        
+        results.append(res_obj)
+        
+    return {
+        "results": results
+    }
+
+
