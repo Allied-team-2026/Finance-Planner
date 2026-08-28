@@ -375,6 +375,41 @@ def _mismatch_note(prose, bundle):
 # ------------------------------------------------------------------- public
 
 
+def build_explanation_payload(bundle):
+    """
+    Transforms the internal bundle into the exact trimmed structure required
+    by the Explanation Agent.
+    """
+    payload = {
+        "context": bundle.get("context", {}),
+        "profile": bundle.get("profile", {}),
+        "risk": bundle.get("risk", {}),
+        "goals": bundle.get("goals", []),
+        "plans": bundle.get("plans", []),
+        "comparisons": bundle.get("comparisons", {}),
+        "n_simulations": bundle.get("n_simulations"),
+    }
+    
+    if "cohort" in bundle:
+        payload["peer_cohort"] = bundle["cohort"]
+    elif "peer_cohort" in bundle:
+        payload["peer_cohort"] = bundle["peer_cohort"]
+        
+    forbidden_keys = {
+        "customer_id", "name", "customer_name", "account_numbers", 
+        "transactions", "investment_events", "individual_peers", 
+        "ground_truth_risk"
+    }
+    
+    def clean(obj):
+        if isinstance(obj, dict):
+            return {k: clean(v) for k, v in obj.items() if k not in forbidden_keys}
+        elif isinstance(obj, list):
+            return [clean(v) for v in obj]
+        return obj
+
+    return clean(payload)
+
 def explain(bundle):
     """Section 8. Turn plan_bundle into readable plan text.
 
