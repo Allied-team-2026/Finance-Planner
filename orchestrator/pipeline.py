@@ -33,7 +33,7 @@ STAGES = {
     "plans":       ("plans_out.json",       "engines.plan_generator:generate"),
     "montecarlo":  ("montecarlo_out.json",  "engines.montecarlo:simulate"),
     "stress":      ("stress_out.json",      "engines.stress_test:run"),
-    "cohort":      ("peer_cohort_out.json", "engines.peer_cohort:summarise"),
+    "cohort":      ("peer_cohort_out.json", "engines.peer_cohort:run"),
     "explanation": ("explanation_out.json", "agents.explanation:explain"),
     "challenge":   ("challenge_out.json",   "agents.challenger:challenge"),
     "verify":      ("verifier_out.json",    "engines.verifier:verify"),
@@ -218,7 +218,10 @@ def run_engines(customer_id, extra_monthly_savings=0):
     plans = run("plans", profile, risk, customer.get("goals", []))
     montecarlo = run("montecarlo", plans)
     stress = run("stress", plans)
-    cohort = run("cohort", customer, profile)
+    
+    from engines.synthetic_data import generate_dataset
+    customers = generate_dataset(1000, seed=42)
+    cohort = run("cohort", customers, customer, profile, risk)
 
     return {
         "customer": customer, "profile": profile, "features": features,

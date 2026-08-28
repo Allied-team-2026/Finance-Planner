@@ -257,6 +257,76 @@ def test_c001_real_profile_through_stress_chain():
         pipeline.REAL_ENGINES.update(original_real_engines)
 
 
+def test_c001_real_profile_through_cohort_chain():
+    """Integration test activating real profile -> features -> risk -> plans -> montecarlo -> stress -> cohort."""
+    real_stages = {"profile", "features", "risk", "plans", "montecarlo", "stress", "cohort"}
+    original_real_engines = set(pipeline.REAL_ENGINES)
+    pipeline.REAL_ENGINES.update(real_stages)
+    try:
+        # Verify only the seven stages are engines
+        status = pipeline.engine_status()
+        for st in real_stages:
+            assert status[st] == "engine"
+        for st in ("customer", "explanation", "challenge", "verify"):
+            assert status[st] == "mock"
+
+        s = pipeline.run_engines("C001")
+        
+        cohort = s["cohort"]
+        
+        # 1. Verify Cohort has all 12 contract fields
+        expected_fields = {
+            "cohort_size", "matched_on", "age_band", "income_band", "goal_type",
+            "median_monthly_surplus", "median_savings_rate", "customer_savings_rate",
+            "savings_rate_percentile", "mismatch_rate", "most_common_plan_label",
+            "most_common_allocation"
+        }
+        assert set(cohort.keys()) == expected_fields
+        
+        # 2. Verify C001 actual output values
+        assert cohort["cohort_size"] == 20
+        assert cohort["matched_on"] == ["age_band", "income_band"]
+        assert cohort["age_band"] == "26-30"
+        assert cohort["income_band"] == "100000-150000"
+        assert cohort["goal_type"] == "house_downpayment"
+        assert cohort["customer_savings_rate"] == 0.375
+        assert cohort["savings_rate_percentile"] == 50.0
+        assert cohort["mismatch_rate"] == 0.75
+        assert cohort["most_common_plan_label"] == "Steady"
+        assert cohort["most_common_allocation"] == {"debt": 0.6, "equity": 0.4}
+        
+        # 3. Verify privacy (no identifier)
+        cohort_json = json.dumps(cohort)
+        assert "Jane" not in cohort_json
+        assert "C001" not in cohort_json
+        assert "peer_" not in cohort_json
+
+    finally:
+        pipeline.REAL_ENGINES.clear()
+        pipeline.REAL_ENGINES.update(original_real_engines)
+
+
+def test_null_cohort_preservation():
+    """Verify that a None cohort doesn't crash the orchestrator."""
+    real_stages = {"profile", "features", "risk", "plans", "montecarlo", "stress", "cohort"}
+    original_real_engines = set(pipeline.REAL_ENGINES)
+    pipeline.REAL_ENGINES.update(real_stages)
+    try:
+        # We can force a None cohort return by monkeypatching generate_dataset to return empty
+        import engines.peer_cohort
+        old_match = engines.peer_cohort.match_cohort
+        engines.peer_cohort.match_cohort = lambda *args, **kwargs: None
+        
+        s = pipeline.run_engines("C001")
+        assert s["cohort"] is None
+        assert s["bundle"]["peer_cohort"] is None
+        
+        engines.peer_cohort.match_cohort = old_match
+    finally:
+        pipeline.REAL_ENGINES.clear()
+        pipeline.REAL_ENGINES.update(original_real_engines)
+
+
 def test_real_plan_generator_activation():
     """Activate the real plan generator and ensure it works with the goals passed from the pipeline."""
     was_real = "plans" in pipeline.REAL_ENGINES
