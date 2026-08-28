@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from engines.montecarlo import load_historical_returns, sample_returns, simulate_path  # noqa: E402
+from engines.montecarlo import load_historical_returns, sample_returns, simulate_path, simulate_plan  # noqa: E402
 import pytest  # noqa: E402
 
 
@@ -148,3 +148,92 @@ def test_simulate_path_extra_returns_ignored():
     result_exact = simulate_path(10000, 1, [0.10])
     result_extra = simulate_path(10000, 1, [0.10, 0.20, 0.30])
     assert result_exact == result_extra
+
+
+# -------------------------------------------------------- simulate_plan
+
+TEST_PLAN = {
+    "plan_id": "T",
+    "monthly_investment": 10000,
+    "years": 2,
+    "goal_amount": 250000,
+}
+
+
+def test_simulate_plan_output_shape():
+    """Output must have exactly the seven §5 fields."""
+    result = simulate_plan(TEST_PLAN)
+    expected_keys = {
+        "plan_id", "success_probability", "successful_simulations",
+        "median_corpus", "p10_corpus", "p90_corpus", "p10_gap_to_goal",
+    }
+    assert set(result.keys()) == expected_keys
+
+
+def test_simulate_plan_plan_id_preserved():
+    result = simulate_plan(TEST_PLAN)
+    assert result["plan_id"] == "T"
+
+
+def test_simulate_plan_n_simulations_count():
+    """successful_simulations must be between 0 and n_simulations."""
+    result = simulate_plan(TEST_PLAN, n_simulations=10000)
+    assert 0 <= result["successful_simulations"] <= 10000
+
+
+def test_simulate_plan_success_consistency():
+    """success_probability must equal successful_simulations / n_simulations."""
+    n = 10000
+    result = simulate_plan(TEST_PLAN, n_simulations=n)
+    assert result["success_probability"] == result["successful_simulations"] / n
+
+
+def test_simulate_plan_percentile_ordering():
+    """p10 <= median <= p90."""
+    result = simulate_plan(TEST_PLAN)
+    assert result["p10_corpus"] <= result["median_corpus"] <= result["p90_corpus"]
+
+
+def test_simulate_plan_p10_gap_formula():
+    """p10_gap_to_goal = max(0, goal_amount - p10_corpus)."""
+    result = simulate_plan(TEST_PLAN)
+    expected_gap = max(0, TEST_PLAN["goal_amount"] - result["p10_corpus"])
+    assert result["p10_gap_to_goal"] == expected_gap
+
+
+def test_simulate_plan_deterministic():
+    """Same seed must produce identical results."""
+    a = simulate_plan(TEST_PLAN, seed=42)
+    b = simulate_plan(TEST_PLAN, seed=42)
+    assert a == b
+
+
+def test_simulate_plan_different_seed():
+    """Different seeds can produce different distributions."""
+    a = simulate_plan(TEST_PLAN, seed=42)
+    b = simulate_plan(TEST_PLAN, seed=999)
+    # At minimum the detailed corpus percentiles should differ
+    assert a["median_corpus"] != b["median_corpus"] or a["p10_corpus"] != b["p10_corpus"]
+
+
+def test_simulate_plan_zero_investment():
+    """Zero monthly investment must produce zero corpus and zero successes."""
+    plan = {
+        "plan_id": "Z",
+        "monthly_investment": 0,
+        "years": 2,
+        "goal_amount": 100000,
+    }
+    result = simulate_plan(plan)
+    assert result["successful_simulations"] == 0
+    assert result["success_probability"] == 0.0
+    assert result["median_corpus"] == 0
+    assert result["p10_corpus"] == 0
+    assert result["p90_corpus"] == 0
+    assert result["p10_gap_to_goal"] == 100000
+
+
+def test_simulate_plan_success_probability_range():
+    """success_probability must be between 0.0 and 1.0."""
+    result = simulate_plan(TEST_PLAN)
+    assert 0.0 <= result["success_probability"] <= 1.0
