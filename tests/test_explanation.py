@@ -3,6 +3,7 @@ import json
 import pytest
 from agents.explanation import build_explanation_payload, explain
 from orchestrator import pipeline
+import groq
 
 def test_explanation_payload_schema_and_privacy():
     """Verify C001 produces a valid payload with no PII or ground_truth_risk."""
@@ -76,21 +77,27 @@ class MockResponse:
     def __init__(self, content):
         self.choices = [MockChoices(content)]
 
-def mock_groq_client(content):
+def mock_groq_client(content, assert_model=None, assert_schema=False):
     class MockClient:
         class Chat:
             class Completions:
                 def create(self, **kwargs):
+                    if assert_model:
+                        assert kwargs["model"] == assert_model
+                    if assert_schema:
+                        fmt = kwargs["response_format"]
+                        assert fmt["type"] == "json_schema"
+                        assert fmt["json_schema"]["strict"] is True
+                        assert "plans_text" in fmt["json_schema"]["schema"]["properties"]
                     return MockResponse(content)
             completions = Completions()
         chat = Chat()
     return MockClient()
 
-def test_explain_validates_schema(monkeypatch):
+def test_model_is_configurable_and_uses_schema(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "fake")
+    monkeypatch.setenv("GROQ_MODEL", "custom-model-8b")
     bundle = {"peer_cohort": None, "profile": {"a": 100}}
-    
-    # Valid output
     valid_out = json.dumps({
         "plans_text": [{"plan_id": "A", "headline": "h", "body": "b", "pros": ["p"], "cons": ["c"]}],
         "goal_priority_note": "note",
@@ -98,10 +105,13 @@ def test_explain_validates_schema(monkeypatch):
         "numbers_used": [100.0]
     })
     
-    import groq
-    monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(valid_out))
+    monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(valid_out, assert_model="custom-model-8b", assert_schema=True))
     res = explain(bundle)
     assert res["goal_priority_note"] == "note"
+
+def test_explain_validates_schema(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "fake")
+    bundle = {"peer_cohort": None, "profile": {"a": 100}}
     
     # Invalid structure (missing body)
     invalid_struct = json.dumps({
@@ -113,12 +123,20 @@ def test_explain_validates_schema(monkeypatch):
     monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(invalid_struct))
     with pytest.raises(ValueError, match="Missing required field in plan_text"):
         explain(bundle)
+        
+    invalid_struct2 = json.dumps({
+        "plans_text": [{"plan_id": "A", "headline": "h", "body": "b", "pros": ["p"], "cons": ["c"]}],
+        "goal_priority_note": "note",
+        "numbers_used": [100.0]
+    })
+    monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(invalid_struct2))
+    with pytest.raises(ValueError, match="Missing or invalid 'mismatch_note'"):
+        explain(bundle)
 
-def test_explain_rejects_unsupported_numbers(monkeypatch):
+def test_explain_rejects_unsupported_numbers_used(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "fake")
     bundle = {"peer_cohort": None, "profile": {"a": 100}}
     
-    # 200 is not in the payload
     out = json.dumps({
         "plans_text": [{"plan_id": "A", "headline": "h", "body": "b", "pros": [], "cons": []}],
         "goal_priority_note": "note",
@@ -126,10 +144,40 @@ def test_explain_rejects_unsupported_numbers(monkeypatch):
         "numbers_used": [100.0, 200.0]
     })
     
-    import groq
     monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(out))
     with pytest.raises(ValueError, match="Unsupported numeric claim"):
         explain(bundle)
+
+def test_explain_rejects_unsupported_prose_number(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "fake")
+    bundle = {"peer_cohort": None, "profile": {"a": 100}}
+    
+    out = json.dumps({
+        "plans_text": [{"plan_id": "A", "headline": "h", "body": "It costs 250 dollars", "pros": [], "cons": []}],
+        "goal_priority_note": "note",
+        "mismatch_note": "note",
+        "numbers_used": [100.0]
+    })
+    
+    monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(out))
+    with pytest.raises(ValueError, match="Unsupported numeric claim in prose: 250"):
+        explain(bundle)
+
+def test_valid_formatting_variant_is_accepted(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "fake")
+    # payload contains 0.7376
+    bundle = {"peer_cohort": None, "profile": {"rate": 0.7376, "cost": 2500000}}
+    
+    out = json.dumps({
+        "plans_text": [{"plan_id": "A", "headline": "Rate 73.76%", "body": "Cost 2,500,000", "pros": [], "cons": []}],
+        "goal_priority_note": "note",
+        "mismatch_note": "note",
+        "numbers_used": [0.7376, 2500000]
+    })
+    
+    monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(out))
+    res = explain(bundle)
+    assert res["numbers_used"] == [0.7376, 2500000]
 
 def test_explain_rejects_privacy_leaks(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "fake")
@@ -142,7 +190,6 @@ def test_explain_rejects_privacy_leaks(monkeypatch):
         "numbers_used": [100.0]
     })
     
-    import groq
     monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(out))
     with pytest.raises(ValueError, match="Privacy violation: 'c001' found"):
         explain(bundle)

@@ -418,6 +418,21 @@ def extract_numbers(obj):
         numbers.add(float(obj))
     return numbers
 
+def validate_prose_numbers(prose, allowed_numbers):
+    import re
+    import math
+    matches = re.findall(r'-?\d+(?:,\d{3})*(?:\.\d+)?', prose)
+    for match in matches:
+        val = float(match.replace(',', ''))
+        
+        def is_allowed(v):
+            return any(math.isclose(v, a, rel_tol=1e-5, abs_tol=1e-5) for a in allowed_numbers)
+            
+        if is_allowed(val) or is_allowed(val / 100.0) or is_allowed(val * 100.0):
+            continue
+            
+        raise ValueError(f"Unsupported numeric claim in prose: {match} (value: {val}) not found in payload")
+
 def explain(bundle):
     """Section 8. Turn plan_bundle into readable plan text.
     
@@ -445,31 +460,51 @@ Never identify the customer.
 Do not present peer statistics as recommendations.
 Explain risk mismatch when present.
 Explain affordability and stress-test outcomes.
-Return the required JSON structure exactly:
-{
-  "plans_text": [
-    {
-      "plan_id": "...",
-      "headline": "...",
-      "body": "...",
-      "pros": ["...", "..."],
-      "cons": ["...", "..."]
-    }
-  ],
-  "goal_priority_note": "...",
-  "mismatch_note": "...",
-  "numbers_used": [...]
-}
 """
+
+    model_name = os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant")
+    
+    schema = {
+        "type": "object",
+        "properties": {
+            "plans_text": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "plan_id": {"type": "string"},
+                        "headline": {"type": "string"},
+                        "body": {"type": "string"},
+                        "pros": {"type": "array", "items": {"type": "string"}},
+                        "cons": {"type": "array", "items": {"type": "string"}}
+                    },
+                    "required": ["plan_id", "headline", "body", "pros", "cons"],
+                    "additionalProperties": False
+                }
+            },
+            "goal_priority_note": {"type": "string"},
+            "mismatch_note": {"type": "string"},
+            "numbers_used": {"type": "array", "items": {"type": "number"}}
+        },
+        "required": ["plans_text", "goal_priority_note", "mismatch_note", "numbers_used"],
+        "additionalProperties": False
+    }
 
     client = Groq(api_key=api_key)
     response = client.chat.completions.create(
-        model="llama3-8b-8192",
+        model=model_name,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": json.dumps(payload)}
         ],
-        response_format={"type": "json_object"},
+        response_format={
+            "type": "json_schema",
+            "json_schema": {
+                "name": "explanation_response",
+                "strict": True,
+                "schema": schema
+            }
+        },
         temperature=0.0
     )
     
@@ -495,7 +530,6 @@ Return the required JSON structure exactly:
         
     # 2. Privacy validation
     result_str = json.dumps(result).lower()
-    # Check for PII or raw data leaks
     forbidden_terms = ["jane", "c001", "g00", "ground_truth_risk", "rahul", "mehta", "account", "transaction", "investment_event"]
     for term in forbidden_terms:
         if term in result_str:
@@ -503,10 +537,27 @@ Return the required JSON structure exactly:
             
     # 3. Numeric validation
     allowed_numbers = extract_numbers(payload)
+    
+    # Check explicitly declared numbers_used
+    import math
     for num in result["numbers_used"]:
         if not isinstance(num, (int, float)):
             raise ValueError(f"Invalid number type in numbers_used: {num}")
-        if float(num) not in allowed_numbers:
-            raise ValueError(f"Unsupported numeric claim: {num} is not in the payload")
+        val = float(num)
+        is_allowed = any(math.isclose(val, a, rel_tol=1e-5, abs_tol=1e-5) for a in allowed_numbers)
+        if not is_allowed:
+            raise ValueError(f"Unsupported numeric claim: {val} is not in the payload")
+            
+    # Check prose strings
+    for pt in result["plans_text"]:
+        validate_prose_numbers(pt["headline"], allowed_numbers)
+        validate_prose_numbers(pt["body"], allowed_numbers)
+        for pro in pt["pros"]:
+            validate_prose_numbers(pro, allowed_numbers)
+        for con in pt["cons"]:
+            validate_prose_numbers(con, allowed_numbers)
+            
+    validate_prose_numbers(result["goal_priority_note"], allowed_numbers)
+    validate_prose_numbers(result["mismatch_note"], allowed_numbers)
             
     return result
