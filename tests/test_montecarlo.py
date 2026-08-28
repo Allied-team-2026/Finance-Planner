@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from engines.montecarlo import load_historical_returns, sample_returns  # noqa: E402
+from engines.montecarlo import load_historical_returns, sample_returns, simulate_path  # noqa: E402
 import pytest  # noqa: E402
 
 
@@ -93,3 +93,58 @@ def test_sample_returns_zero_samples():
 def test_sample_returns_empty_raises():
     with pytest.raises(ValueError):
         sample_returns([], 10, seed=42)
+
+
+# --------------------------------------------------------- simulate_path
+
+def test_simulate_path_one_year_positive():
+    """One year at 10% annual return with 10,000/month SIP."""
+    result = simulate_path(10000, 1, [0.10])
+    assert isinstance(result, int)
+    assert result > 120000  # must grow beyond 12 contributions
+
+
+def test_simulate_path_one_year_negative():
+    """One year at -20% should produce less than the sum of contributions."""
+    result = simulate_path(10000, 1, [-0.20])
+    assert result < 120000  # less than 12 * 10,000
+    assert result > 0       # still positive (only -20%, not -100%)
+
+
+def test_simulate_path_zero_return():
+    """Zero annual return: corpus equals sum of contributions exactly."""
+    result = simulate_path(10000, 1, [0.0])
+    assert result == 120000  # 12 months * 10,000, no growth
+
+
+def test_simulate_path_sequence_order_sensitivity():
+    """Different ordering of the same returns should produce different corpora.
+
+    A bad year early hurts less (less capital exposed) than a bad year late.
+    This is the sequence risk the contract explicitly calls out.
+    """
+    # Good year first, bad year second
+    corpus_good_first = simulate_path(10000, 2, [0.30, -0.30])
+    # Bad year first, good year second
+    corpus_bad_first = simulate_path(10000, 2, [-0.30, 0.30])
+    assert corpus_good_first != corpus_bad_first
+
+
+def test_simulate_path_insufficient_returns_raises():
+    """Must raise if fewer annual returns than years are supplied."""
+    with pytest.raises(ValueError):
+        simulate_path(10000, 3, [0.10, 0.10])  # only 2, need 3
+
+
+def test_simulate_path_deterministic():
+    """Same inputs must produce identical results every time."""
+    a = simulate_path(10000, 2, [0.10, 0.05])
+    b = simulate_path(10000, 2, [0.10, 0.05])
+    assert a == b
+
+
+def test_simulate_path_extra_returns_ignored():
+    """Extra annual returns beyond `years` are ignored, not an error."""
+    result_exact = simulate_path(10000, 1, [0.10])
+    result_extra = simulate_path(10000, 1, [0.10, 0.20, 0.30])
+    assert result_exact == result_extra
