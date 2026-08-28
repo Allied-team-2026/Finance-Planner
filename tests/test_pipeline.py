@@ -66,11 +66,11 @@ def test_no_identity_reaches_the_agents():
     assert "ground_truth_risk" not in text
 
 
-def test_name_comes_back_in_the_response():
-    """De-identifying is only safe if the name is genuinely restored after."""
+def test_privacy_boundary_in_response():
+    """Ensure the final API response does not expose customer_id or customer_name."""
     response = make_plan("C001")
-    assert response["customer_name"] == "Rahul Mehta"
-    assert response["customer_id"] == "C001"
+    assert "customer_name" not in response
+    assert "customer_id" not in response
 
 
 def test_rename_seam_holds():

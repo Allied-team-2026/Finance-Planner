@@ -1,7 +1,5 @@
 {
   "schema_version": "api-v1",
-  "customer_id": "C001",
-  "customer_name": "Rahul Mehta",
   "generated_at": "2026-08-25",
 
   "context": {

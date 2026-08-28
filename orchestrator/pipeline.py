@@ -151,8 +151,6 @@ def build_response(customer, profile, risk, plans, montecarlo, stress,
 
     return {
         "schema_version": SCHEMA_VERSION,
-        "customer_id": customer["customer_id"],
-        "customer_name": customer["name"],
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "context": {k: customer[k] for k in
                     ("age", "dependents", "employment_type", "city_tier")},
@@ -257,4 +255,12 @@ def make_plan(customer_id, extra_monthly_savings=0):
 def make_challenge(customer_id, chosen_plan_id):
     """Runs only after the customer picks a plan."""
     s = run_stages(customer_id)
-    return run("challenge", s["bundle"], s["explanation"], s["verify"], chosen_plan_id)
+    
+    # validate chosen_plan_id
+    if not any(p["plan_id"] == chosen_plan_id for p in s["plans"]["plans"]):
+        raise ValueError(f"Invalid chosen_plan_id: {chosen_plan_id}")
+        
+    challenge = run("challenge", s["bundle"], s["explanation"], s["verify"], chosen_plan_id)
+    return build_response(s["customer"], s["profile"], s["risk"], s["plans"],
+                          s["montecarlo"], s["stress"], s["explanation"],
+                          s["cohort"], s["verify"], challenge=challenge)
