@@ -1,7 +1,8 @@
 """§3b Revealed Risk — baseline model training and evaluation.
 
 This module trains on the six §3a features and ground_truth_risk labels
-(which are now generated with meaningful correlation to the features).
+(which are now generated with a recalibrated scoring formula that aligns
+the C001 demo persona to a 'moderate' outcome).
 It must never touch a raw customer record (seam rule).
 """
 

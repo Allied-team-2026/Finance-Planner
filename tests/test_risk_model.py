@@ -1,4 +1,4 @@
-"""Tests for the §3b baseline risk model (using the correlated dataset)."""
+"""Tests for the §3b baseline risk model (using the C001-aligned recalibrated dataset)."""
 
 import numpy as np
 from models.risk_model import (
