@@ -154,7 +154,15 @@ def test_c001_with_real_dataset():
 # ------------------------------------------------------------- 3. Statistics
 from engines.peer_cohort import calculate_cohort_statistics
 
-def test_calculate_cohort_statistics_known_5_customer():
+@pytest.fixture
+def mock_build_profile(monkeypatch):
+    """
+    For the pure fixture tests, we just want build_profile to return the peer
+    as-is, since our fixtures already contain the pre-computed fields.
+    """
+    monkeypatch.setattr("engines.peer_cohort.build_profile", lambda p: p)
+
+def test_calculate_cohort_statistics_known_5_customer(mock_build_profile):
     """Test calculations with a known 5-customer cohort."""
     matched_customers = [
         {"monthly_income": 100000, "monthly_surplus": 10000},  # rate: 0.1
@@ -183,7 +191,7 @@ def test_calculate_cohort_statistics_known_5_customer():
     stats = calculate_cohort_statistics(matched_customers, cust_above)
     assert stats["savings_rate_percentile"] == 80.0
 
-def test_percentile_ties():
+def test_percentile_ties(mock_build_profile):
     matched_customers = [
         {"monthly_income": 100000, "monthly_surplus": 20000},  # 0.2
         {"monthly_income": 100000, "monthly_surplus": 20000},  # 0.2
@@ -195,7 +203,7 @@ def test_percentile_ties():
     stats = calculate_cohort_statistics(matched_customers, cust)
     assert stats["savings_rate_percentile"] == 50.0
 
-def test_c001_savings_rate():
+def test_c001_savings_rate(mock_build_profile):
     matched_customers = [
         {"monthly_income": 100000, "monthly_surplus": 20000},  # rate 0.2
     ]
@@ -203,7 +211,7 @@ def test_c001_savings_rate():
     stats = calculate_cohort_statistics(matched_customers, c001)
     assert stats["customer_savings_rate"] == 0.375
 
-def test_zero_income_error():
+def test_zero_income_error(mock_build_profile):
     cust = {"monthly_income": 0, "monthly_surplus": 0}
     with pytest.raises(ValueError):
         calculate_cohort_statistics([{"monthly_income": 100000, "monthly_surplus": 20000}], cust)
@@ -212,7 +220,7 @@ def test_zero_income_error():
     with pytest.raises(ValueError):
         calculate_cohort_statistics([{"monthly_income": 0, "monthly_surplus": 0}], cust)
 
-def test_deterministic_and_no_individual_data_exposed():
+def test_deterministic_and_no_individual_data_exposed(mock_build_profile):
     matched = [{"monthly_income": 100000, "monthly_surplus": 20000}]
     cust = {"monthly_income": 120000, "monthly_surplus": 45000}
     stats1 = calculate_cohort_statistics(matched, cust)
