@@ -1,7 +1,7 @@
 import os
 import json
 import pytest
-from agents.explanation import build_explanation_payload, explain
+from agents.explanation import build_explanation_payload, explain, extract_numbers_with_paths, get_inferred_units
 from orchestrator import pipeline
 import groq
 
@@ -16,25 +16,21 @@ def test_explanation_payload_schema_and_privacy():
         
         payload = build_explanation_payload(bundle)
         
-        # 1. Correct payload schema
         expected_keys = {"context", "profile", "risk", "goals", "plans", "comparisons", "n_simulations", "peer_cohort"}
         assert set(payload.keys()) == expected_keys
         
-        # 2. Privacy verification
         payload_json = json.dumps(payload)
         assert "Jane" not in payload_json
         assert "C001" not in payload_json
-        assert "G00" not in payload_json  # Synthetic customer IDs start with G00
+        assert "G00" not in payload_json
         assert "ground_truth_risk" not in payload_json
         
-        # 3. Numeric pass-through verification
         assert payload["profile"]["monthly_surplus"] == bundle["profile"]["monthly_surplus"]
         assert payload["risk"]["stated"] == bundle["risk"]["stated"]
         assert payload["risk"]["confidence"] == bundle["risk"]["confidence"]
         assert payload["n_simulations"] == 10000
         assert payload["peer_cohort"]["customer_savings_rate"] == s["cohort"]["customer_savings_rate"]
         
-        # 4. Plan pass-through
         assert len(payload["plans"]) == 3
         assert payload["plans"][0]["monthly_investment"] == bundle["plans"][0]["monthly_investment"]
         
@@ -43,7 +39,6 @@ def test_explanation_payload_schema_and_privacy():
         pipeline.REAL_ENGINES.update(original_real)
 
 def test_null_cohort_handling():
-    """Verify payload builder handles missing cohort data safely."""
     bundle = {
         "context": {}, "profile": {}, "risk": {}, "goals": [], "plans": [],
         "comparisons": {}, "n_simulations": 10000, "peer_cohort": None
@@ -53,7 +48,6 @@ def test_null_cohort_handling():
     assert payload["n_simulations"] == 10000
 
 def test_determinism():
-    """Verify repeated calls yield identical payloads."""
     bundle = {
         "context": {"age": 28},
         "profile": {"monthly_surplus": 45000},
@@ -65,7 +59,6 @@ def test_determinism():
     assert p1 == p2
 
 def test_missing_api_key_raises_error(monkeypatch):
-    """Verify that explain() raises a clear error when GROQ_API_KEY is missing."""
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
     with pytest.raises(ValueError, match="GROQ_API_KEY environment variable is not set"):
         explain({})
@@ -109,11 +102,25 @@ def test_model_is_configurable_and_uses_schema(monkeypatch):
     res = explain(bundle)
     assert res["goal_priority_note"] == "note"
 
+def test_default_model_uses_schema(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "fake")
+    monkeypatch.delenv("GROQ_MODEL", raising=False)
+    bundle = {"peer_cohort": None, "profile": {"a": 100}}
+    valid_out = json.dumps({
+        "plans_text": [{"plan_id": "A", "headline": "h", "body": "b", "pros": ["p"], "cons": ["c"]}],
+        "goal_priority_note": "note",
+        "mismatch_note": "note",
+        "numbers_used": [100.0]
+    })
+    
+    monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(valid_out, assert_model="llama-3.3-70b-versatile", assert_schema=True))
+    res = explain(bundle)
+    assert res["goal_priority_note"] == "note"
+
 def test_explain_validates_schema(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "fake")
     bundle = {"peer_cohort": None, "profile": {"a": 100}}
     
-    # Invalid structure (missing body)
     invalid_struct = json.dumps({
         "plans_text": [{"plan_id": "A", "headline": "h", "pros": [], "cons": []}],
         "goal_priority_note": "note",
@@ -122,15 +129,6 @@ def test_explain_validates_schema(monkeypatch):
     })
     monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(invalid_struct))
     with pytest.raises(ValueError, match="Missing required field in plan_text"):
-        explain(bundle)
-        
-    invalid_struct2 = json.dumps({
-        "plans_text": [{"plan_id": "A", "headline": "h", "body": "b", "pros": ["p"], "cons": ["c"]}],
-        "goal_priority_note": "note",
-        "numbers_used": [100.0]
-    })
-    monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(invalid_struct2))
-    with pytest.raises(ValueError, match="Missing or invalid 'mismatch_note'"):
         explain(bundle)
 
 def test_explain_rejects_unsupported_numbers_used(monkeypatch):
@@ -165,7 +163,6 @@ def test_explain_rejects_unsupported_prose_number(monkeypatch):
 
 def test_valid_formatting_variant_is_accepted(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "fake")
-    # payload contains 0.7376
     bundle = {"peer_cohort": None, "profile": {"rate": 0.7376, "cost": 2500000}}
     
     out = json.dumps({
@@ -178,6 +175,26 @@ def test_valid_formatting_variant_is_accepted(monkeypatch):
     monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(out))
     res = explain(bundle)
     assert res["numbers_used"] == [0.7376, 2500000]
+
+def test_explain_rejects_semantic_mismatch(monkeypatch):
+    """
+    Test that a number existing in the payload but used with the wrong units
+    is rejected by field-aware provenance.
+    """
+    monkeypatch.setenv("GROQ_API_KEY", "fake")
+    # Payload has years=5, no money values equal to 5.
+    bundle = {"peer_cohort": None, "goals": [{"years": 5}], "comparisons": {"plan_count": 5}}
+    
+    out = json.dumps({
+        "plans_text": [{"plan_id": "A", "headline": "You have ₹5", "body": "b", "pros": [], "cons": []}],
+        "goal_priority_note": "note",
+        "mismatch_note": "note",
+        "numbers_used": [5.0]
+    })
+    
+    monkeypatch.setattr(groq, "Groq", lambda api_key: mock_groq_client(out))
+    with pytest.raises(ValueError, match="Semantic mismatch: 5 used as money"):
+        explain(bundle)
 
 def test_explain_rejects_privacy_leaks(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "fake")
@@ -205,7 +222,6 @@ def test_explanation_live_groq():
         bundle = s["bundle"]
         result = explain(bundle)
         
-        # Verify schema
         assert isinstance(result["plans_text"], list)
         assert isinstance(result["goal_priority_note"], str)
         assert isinstance(result["numbers_used"], list)

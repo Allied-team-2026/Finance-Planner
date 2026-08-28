@@ -406,32 +406,78 @@ def build_explanation_payload(bundle):
 
     return clean(payload)
 
-def extract_numbers(obj):
-    numbers = set()
+def extract_numbers_with_paths(obj, path="payload"):
+    numbers = {}
     if isinstance(obj, dict):
-        for v in obj.values():
-            numbers.update(extract_numbers(v))
+        for k, v in obj.items():
+            for num, paths in extract_numbers_with_paths(v, f"{path}.{k}").items():
+                numbers.setdefault(num, []).extend(paths)
     elif isinstance(obj, list):
-        for v in obj:
-            numbers.update(extract_numbers(v))
+        for i, v in enumerate(obj):
+            for num, paths in extract_numbers_with_paths(v, f"{path}[{i}]").items():
+                numbers.setdefault(num, []).extend(paths)
     elif isinstance(obj, (int, float)) and not isinstance(obj, bool):
-        numbers.add(float(obj))
+        numbers.setdefault(float(obj), []).append(path)
     return numbers
 
-def validate_prose_numbers(prose, allowed_numbers):
+def get_inferred_units(path_list):
+    """Infer the unit of the data based on its path in the payload."""
+    units = set()
+    for path in path_list:
+        path_lower = path.lower()
+        if any(w in path_lower for w in ["amount", "corpus", "investment", "surplus", "income", "expense", "worth", "delta", "impact", "gap", "shortfall", "cost"]):
+            units.add("money")
+        if any(w in path_lower for w in ["percent", "rate", "probability", "allocation", "confidence"]):
+            units.add("percent")
+        if any(w in path_lower for w in ["year", "month", "day"]):
+            units.add("time")
+        if any(w in path_lower for w in ["count", "simulations", "dependents"]):
+            units.add("count")
+    return units
+
+def validate_prose_numbers(prose, numbers_map):
     import re
     import math
+    # Find all numeric substrings
     matches = re.findall(r'-?\d+(?:,\d{3})*(?:\.\d+)?', prose)
     for match in matches:
         val = float(match.replace(',', ''))
         
-        def is_allowed(v):
-            return any(math.isclose(v, a, rel_tol=1e-5, abs_tol=1e-5) for a in allowed_numbers)
+        # Check if percentage
+        is_percentage_format = False
+        match_idx = prose.find(match)
+        if match_idx != -1:
+            # Look ahead for '%'
+            if match_idx + len(match) < len(prose) and prose[match_idx + len(match):match_idx + len(match) + 1] == '%':
+                is_percentage_format = True
+            # Look behind for money symbols
+            if match_idx > 0 and prose[match_idx - 1] in ['₹', '$']:
+                is_money_format = True
+            else:
+                is_money_format = False
+        else:
+            is_money_format = False
             
-        if is_allowed(val) or is_allowed(val / 100.0) or is_allowed(val * 100.0):
-            continue
+        def get_paths(v):
+            for a, paths in numbers_map.items():
+                if math.isclose(v, a, rel_tol=1e-5, abs_tol=1e-5):
+                    return paths
+            return []
             
-        raise ValueError(f"Unsupported numeric claim in prose: {match} (value: {val}) not found in payload")
+        paths = get_paths(val)
+        paths_pct = get_paths(val / 100.0) if is_percentage_format or True else []  # Also check if value/100 exists
+        
+        valid_paths = paths + paths_pct
+        if not valid_paths:
+            raise ValueError(f"Unsupported numeric claim in prose: {match} (value: {val}) not found in payload")
+            
+        # Semantic validation
+        inferred_units = get_inferred_units(valid_paths)
+        if inferred_units:
+            if is_money_format and "money" not in inferred_units:
+                raise ValueError(f"Semantic mismatch: {match} used as money but originates from {valid_paths}")
+            if is_percentage_format and "percent" not in inferred_units:
+                raise ValueError(f"Semantic mismatch: {match} used as percent but originates from {valid_paths}")
 
 def explain(bundle):
     """Section 8. Turn plan_bundle into readable plan text.
@@ -462,7 +508,7 @@ Explain risk mismatch when present.
 Explain affordability and stress-test outcomes.
 """
 
-    model_name = os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant")
+    model_name = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
     
     schema = {
         "type": "object",
@@ -536,7 +582,7 @@ Explain affordability and stress-test outcomes.
             raise ValueError(f"Privacy violation: '{term}' found in explanation")
             
     # 3. Numeric validation
-    allowed_numbers = extract_numbers(payload)
+    numbers_map = extract_numbers_with_paths(payload)
     
     # Check explicitly declared numbers_used
     import math
@@ -544,20 +590,20 @@ Explain affordability and stress-test outcomes.
         if not isinstance(num, (int, float)):
             raise ValueError(f"Invalid number type in numbers_used: {num}")
         val = float(num)
-        is_allowed = any(math.isclose(val, a, rel_tol=1e-5, abs_tol=1e-5) for a in allowed_numbers)
+        is_allowed = any(math.isclose(val, a, rel_tol=1e-5, abs_tol=1e-5) for a in numbers_map.keys())
         if not is_allowed:
             raise ValueError(f"Unsupported numeric claim: {val} is not in the payload")
             
     # Check prose strings
     for pt in result["plans_text"]:
-        validate_prose_numbers(pt["headline"], allowed_numbers)
-        validate_prose_numbers(pt["body"], allowed_numbers)
+        validate_prose_numbers(pt["headline"], numbers_map)
+        validate_prose_numbers(pt["body"], numbers_map)
         for pro in pt["pros"]:
-            validate_prose_numbers(pro, allowed_numbers)
+            validate_prose_numbers(pro, numbers_map)
         for con in pt["cons"]:
-            validate_prose_numbers(con, allowed_numbers)
+            validate_prose_numbers(con, numbers_map)
             
-    validate_prose_numbers(result["goal_priority_note"], allowed_numbers)
-    validate_prose_numbers(result["mismatch_note"], allowed_numbers)
+    validate_prose_numbers(result["goal_priority_note"], numbers_map)
+    validate_prose_numbers(result["mismatch_note"], numbers_map)
             
     return result
