@@ -171,3 +171,27 @@ def test_no_single_feature_determines_label(dataset_1000):
     assert any(len(labels) > 1 for labels in panic_groups.values()), "panic_sell_count deterministically defines the label"
 
 
+def test_c001_calibration():
+    """C001's exact proxy feature vector must intrinsically score as 'moderate'
+    before random noise is applied, proving the calibration weights are correct."""
+    from engines.synthetic_data import _assign_ground_truth_risk
+    
+    # Mock RNG that returns exactly 0 for both noise terms
+    class ZeroRng:
+        def gauss(self, mu, sigma): return 0.0
+        def uniform(self, a, b): return 0.0
+        
+    c001_proxies = {
+        "panic_sell_count": 2,
+        "avg_days_to_exit": 3.0,
+        "expense_volatility": 0.12,
+        "emergency_fund_months": 0.4,
+        "equity_allocation_pct": 0.5,
+        "budget_overshoot_rate": 0.42
+    }
+    
+    # Must assign moderate without referencing customer_id
+    label = _assign_ground_truth_risk(ZeroRng(), c001_proxies)
+    assert label == "moderate", f"Expected moderate, got {label}"
+
+

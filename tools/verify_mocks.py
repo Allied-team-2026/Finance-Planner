@@ -105,13 +105,24 @@ api = data["api_response.json"]
 
 assets = sum(cust["assets"].values())
 liab = sum(l["outstanding"] for l in cust["liabilities"])
-txn_total = sum(t["amount"] for t in cust["transactions"])
+transactions = cust["transactions"]
+if transactions:
+    all_months = sorted(list(set(t["date"][:7] for t in transactions)))
+    last_12_months = set(all_months[-12:])
+    filtered_transactions = [t for t in transactions if t["date"][:7] in last_12_months]
+    num_months = len(last_12_months)
+else:
+    filtered_transactions = []
+    num_months = 1
+
+txn_total = sum(t["amount"] for t in filtered_transactions)
+avg_monthly_txn = int(round(txn_total / num_months))
 
 check("profile.total_assets == sum of assets", prof["total_assets"], assets)
 check("profile.total_liabilities == sum of outstanding", prof["total_liabilities"], liab)
 check("profile.net_worth == assets - liabilities", prof["net_worth"], assets - liab)
 check("profile.monthly_income == customer income", prof["monthly_income"], cust["monthly_income"])
-check("profile.monthly_expense == transaction month total", prof["monthly_expense"], txn_total)
+check("profile.monthly_expense == transaction month total", prof["monthly_expense"], avg_monthly_txn)
 check("profile.monthly_surplus == income - expense",
       prof["monthly_surplus"], prof["monthly_income"] - prof["monthly_expense"])
 check("profile.existing_emi_total == sum of emis",
@@ -124,8 +135,17 @@ check("expense_breakdown sums to monthly_expense",
 
 # breakdown must match the transactions category by category
 by_cat = {}
-for t in cust["transactions"]:
+for t in filtered_transactions:
     by_cat[t["category"]] = by_cat.get(t["category"], 0) + t["amount"]
+
+for cat in by_cat:
+    by_cat[cat] = int(round(by_cat[cat] / num_months))
+
+diff = avg_monthly_txn - sum(by_cat.values())
+if diff != 0 and by_cat:
+    largest_cat = max(by_cat, key=by_cat.get)
+    by_cat[largest_cat] += diff
+
 check("expense_breakdown matches transactions by category",
       dict(sorted(prof["expense_breakdown"].items())), dict(sorted(by_cat.items())))
 
