@@ -278,7 +278,7 @@ export default function OnboardingFlow({ onComplete, onCancel }) {
                           #{g.priority}
                         </span>
                         <span className="text-white font-medium capitalize">
-                          {g.label}
+                          {g.name ? g.name.replace(/_/g, ' ') : ''}
                         </span>
                       </div>
                       <span className="text-emerald-400 font-bold">
