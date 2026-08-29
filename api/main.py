@@ -8,8 +8,9 @@ Run:  uvicorn api.main:app --reload
 Docs: http://127.0.0.1:8000/docs
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from orchestrator.pipeline import engine_status, make_challenge, make_plan
@@ -25,19 +26,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    if isinstance(exc, ValueError):
+        return JSONResponse(
+            status_code=400,
+            content={"detail": str(exc)},
+        )
+    # Do not leak internal stack traces
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
+
 
 class PlanRequest(BaseModel):
-    customer_id: str = "C001"
+    customer_id: str
 
 
 class ChallengeRequest(BaseModel):
-    customer_id: str = "C001"
+    customer_id: str
     chosen_plan_id: str
 
 
 class WhatIfRequest(BaseModel):
-    customer_id: str = "C001"
-    extra_monthly_savings: int = 0
+    customer_id: str
+    extra_monthly_savings: int
 
 
 @app.post("/api/plan")

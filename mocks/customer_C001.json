@@ -1,6 +1,5 @@
 {
   "_mock_note": "Hand-written mock for contract section 1. Transactions below are ONE representative month (July 2026), deliberately calibrated so the month total equals the 12-month mean used in section 2 - that way profile_out.json is reproducible from this file. The real generator must emit at least 24 months per customer. investment_events is complete for C001. Every value here is locked to mocks/api_response.json; changing one means changing the others.",
-
   "customer_id": "C001",
   "name": "Rahul Mehta",
   "age": 28,
@@ -9,42 +8,1054 @@
   "city_tier": "metro",
   "stated_risk": "aggressive",
   "monthly_income": 120000,
-
   "assets": {
     "savings_account": 30000,
     "equity_mf": 400000,
     "fixed_deposit": 370000
   },
-
   "liabilities": [
-    { "type": "car_loan", "outstanding": 200000, "emi": 8000 }
+    {
+      "type": "car_loan",
+      "outstanding": 200000,
+      "emi": 8000
+    }
   ],
-
   "goals": [
-    { "name": "house_downpayment", "target_amount": 2500000, "years": 5, "priority": 1 },
-    { "name": "child_education", "target_amount": 1800000, "years": 12, "priority": 2 }
+    {
+      "name": "house_downpayment",
+      "target_amount": 2500000,
+      "years": 5,
+      "priority": 1
+    },
+    {
+      "name": "child_education",
+      "target_amount": 1800000,
+      "years": 12,
+      "priority": 2
+    }
   ],
-
   "transactions": [
-    { "date": "2026-07-01", "category": "rent",       "amount": 25000 },
-    { "date": "2026-07-02", "category": "emi",        "amount": 8000 },
-    { "date": "2026-07-03", "category": "insurance",  "amount": 2500 },
-    { "date": "2026-07-04", "category": "utilities",  "amount": 2000 },
-    { "date": "2026-07-06", "category": "groceries",  "amount": 4200 },
-    { "date": "2026-07-07", "category": "transport",  "amount": 3500 },
-    { "date": "2026-07-09", "category": "dining",     "amount": 2200 },
-    { "date": "2026-07-11", "category": "misc",       "amount": 7000 },
-    { "date": "2026-07-13", "category": "groceries",  "amount": 3800 },
-    { "date": "2026-07-15", "category": "utilities",  "amount": 1500 },
-    { "date": "2026-07-16", "category": "dining",     "amount": 1800 },
-    { "date": "2026-07-18", "category": "transport",  "amount": 2500 },
-    { "date": "2026-07-20", "category": "groceries",  "amount": 2100 },
-    { "date": "2026-07-22", "category": "misc",       "amount": 4000 },
-    { "date": "2026-07-24", "category": "dining",     "amount": 1000 },
-    { "date": "2026-07-27", "category": "groceries",  "amount": 1900 },
-    { "date": "2026-07-29", "category": "misc",       "amount": 2000 }
+    {
+      "date": "2025-08-01",
+      "category": "rent",
+      "amount": 25000
+    },
+    {
+      "date": "2025-08-02",
+      "category": "emi",
+      "amount": 8000
+    },
+    {
+      "date": "2025-08-03",
+      "category": "insurance",
+      "amount": 2500
+    },
+    {
+      "date": "2025-08-04",
+      "category": "utilities",
+      "amount": 2000
+    },
+    {
+      "date": "2025-08-06",
+      "category": "groceries",
+      "amount": 4200
+    },
+    {
+      "date": "2025-08-07",
+      "category": "transport",
+      "amount": 3500
+    },
+    {
+      "date": "2025-08-09",
+      "category": "dining",
+      "amount": 2200
+    },
+    {
+      "date": "2025-08-11",
+      "category": "misc",
+      "amount": 12000
+    },
+    {
+      "date": "2025-08-13",
+      "category": "groceries",
+      "amount": 3800
+    },
+    {
+      "date": "2025-08-15",
+      "category": "utilities",
+      "amount": 1500
+    },
+    {
+      "date": "2025-08-16",
+      "category": "dining",
+      "amount": 1800
+    },
+    {
+      "date": "2025-08-18",
+      "category": "transport",
+      "amount": 2500
+    },
+    {
+      "date": "2025-08-20",
+      "category": "groceries",
+      "amount": 2100
+    },
+    {
+      "date": "2025-08-22",
+      "category": "misc",
+      "amount": 4000
+    },
+    {
+      "date": "2025-08-24",
+      "category": "dining",
+      "amount": 1000
+    },
+    {
+      "date": "2025-08-27",
+      "category": "groceries",
+      "amount": 1900
+    },
+    {
+      "date": "2025-08-29",
+      "category": "misc",
+      "amount": 2000
+    },
+    {
+      "date": "2025-09-01",
+      "category": "rent",
+      "amount": 25000
+    },
+    {
+      "date": "2025-09-02",
+      "category": "emi",
+      "amount": 8000
+    },
+    {
+      "date": "2025-09-03",
+      "category": "insurance",
+      "amount": 2500
+    },
+    {
+      "date": "2025-09-04",
+      "category": "utilities",
+      "amount": 2000
+    },
+    {
+      "date": "2025-09-06",
+      "category": "groceries",
+      "amount": 4200
+    },
+    {
+      "date": "2025-09-07",
+      "category": "transport",
+      "amount": 3500
+    },
+    {
+      "date": "2025-09-09",
+      "category": "dining",
+      "amount": 2200
+    },
+    {
+      "date": "2025-09-11",
+      "category": "misc",
+      "amount": 2000
+    },
+    {
+      "date": "2025-09-13",
+      "category": "groceries",
+      "amount": 3800
+    },
+    {
+      "date": "2025-09-15",
+      "category": "utilities",
+      "amount": 1500
+    },
+    {
+      "date": "2025-09-16",
+      "category": "dining",
+      "amount": 1800
+    },
+    {
+      "date": "2025-09-18",
+      "category": "transport",
+      "amount": 2500
+    },
+    {
+      "date": "2025-09-20",
+      "category": "groceries",
+      "amount": 2100
+    },
+    {
+      "date": "2025-09-22",
+      "category": "misc",
+      "amount": 4000
+    },
+    {
+      "date": "2025-09-24",
+      "category": "dining",
+      "amount": 1000
+    },
+    {
+      "date": "2025-09-27",
+      "category": "groceries",
+      "amount": 1900
+    },
+    {
+      "date": "2025-09-29",
+      "category": "misc",
+      "amount": 2000
+    },
+    {
+      "date": "2025-10-01",
+      "category": "rent",
+      "amount": 25000
+    },
+    {
+      "date": "2025-10-02",
+      "category": "emi",
+      "amount": 8000
+    },
+    {
+      "date": "2025-10-03",
+      "category": "insurance",
+      "amount": 2500
+    },
+    {
+      "date": "2025-10-04",
+      "category": "utilities",
+      "amount": 2000
+    },
+    {
+      "date": "2025-10-06",
+      "category": "groceries",
+      "amount": 4200
+    },
+    {
+      "date": "2025-10-07",
+      "category": "transport",
+      "amount": 3500
+    },
+    {
+      "date": "2025-10-09",
+      "category": "dining",
+      "amount": 2200
+    },
+    {
+      "date": "2025-10-11",
+      "category": "misc",
+      "amount": 15000
+    },
+    {
+      "date": "2025-10-13",
+      "category": "groceries",
+      "amount": 3800
+    },
+    {
+      "date": "2025-10-15",
+      "category": "utilities",
+      "amount": 1500
+    },
+    {
+      "date": "2025-10-16",
+      "category": "dining",
+      "amount": 1800
+    },
+    {
+      "date": "2025-10-18",
+      "category": "transport",
+      "amount": 2500
+    },
+    {
+      "date": "2025-10-20",
+      "category": "groceries",
+      "amount": 2100
+    },
+    {
+      "date": "2025-10-22",
+      "category": "misc",
+      "amount": 4000
+    },
+    {
+      "date": "2025-10-24",
+      "category": "dining",
+      "amount": 1000
+    },
+    {
+      "date": "2025-10-27",
+      "category": "groceries",
+      "amount": 1900
+    },
+    {
+      "date": "2025-10-29",
+      "category": "misc",
+      "amount": 2000
+    },
+    {
+      "date": "2025-11-01",
+      "category": "rent",
+      "amount": 25000
+    },
+    {
+      "date": "2025-11-02",
+      "category": "emi",
+      "amount": 8000
+    },
+    {
+      "date": "2025-11-03",
+      "category": "insurance",
+      "amount": 2500
+    },
+    {
+      "date": "2025-11-04",
+      "category": "utilities",
+      "amount": 2000
+    },
+    {
+      "date": "2025-11-06",
+      "category": "groceries",
+      "amount": 4200
+    },
+    {
+      "date": "2025-11-07",
+      "category": "transport",
+      "amount": 3500
+    },
+    {
+      "date": "2025-11-09",
+      "category": "dining",
+      "amount": 2200
+    },
+    {
+      "date": "2025-11-11",
+      "category": "misc",
+      "amount": -1000
+    },
+    {
+      "date": "2025-11-13",
+      "category": "groceries",
+      "amount": 3800
+    },
+    {
+      "date": "2025-11-15",
+      "category": "utilities",
+      "amount": 1500
+    },
+    {
+      "date": "2025-11-16",
+      "category": "dining",
+      "amount": 1800
+    },
+    {
+      "date": "2025-11-18",
+      "category": "transport",
+      "amount": 2500
+    },
+    {
+      "date": "2025-11-20",
+      "category": "groceries",
+      "amount": 2100
+    },
+    {
+      "date": "2025-11-22",
+      "category": "misc",
+      "amount": 4000
+    },
+    {
+      "date": "2025-11-24",
+      "category": "dining",
+      "amount": 1000
+    },
+    {
+      "date": "2025-11-27",
+      "category": "groceries",
+      "amount": 1900
+    },
+    {
+      "date": "2025-11-29",
+      "category": "misc",
+      "amount": 2000
+    },
+    {
+      "date": "2025-12-01",
+      "category": "rent",
+      "amount": 25000
+    },
+    {
+      "date": "2025-12-02",
+      "category": "emi",
+      "amount": 8000
+    },
+    {
+      "date": "2025-12-03",
+      "category": "insurance",
+      "amount": 2500
+    },
+    {
+      "date": "2025-12-04",
+      "category": "utilities",
+      "amount": 2000
+    },
+    {
+      "date": "2025-12-06",
+      "category": "groceries",
+      "amount": 4200
+    },
+    {
+      "date": "2025-12-07",
+      "category": "transport",
+      "amount": 3500
+    },
+    {
+      "date": "2025-12-09",
+      "category": "dining",
+      "amount": 2200
+    },
+    {
+      "date": "2025-12-11",
+      "category": "misc",
+      "amount": 19000
+    },
+    {
+      "date": "2025-12-13",
+      "category": "groceries",
+      "amount": 3800
+    },
+    {
+      "date": "2025-12-15",
+      "category": "utilities",
+      "amount": 1500
+    },
+    {
+      "date": "2025-12-16",
+      "category": "dining",
+      "amount": 1800
+    },
+    {
+      "date": "2025-12-18",
+      "category": "transport",
+      "amount": 2500
+    },
+    {
+      "date": "2025-12-20",
+      "category": "groceries",
+      "amount": 2100
+    },
+    {
+      "date": "2025-12-22",
+      "category": "misc",
+      "amount": 4000
+    },
+    {
+      "date": "2025-12-24",
+      "category": "dining",
+      "amount": 1000
+    },
+    {
+      "date": "2025-12-27",
+      "category": "groceries",
+      "amount": 1900
+    },
+    {
+      "date": "2025-12-29",
+      "category": "misc",
+      "amount": 2000
+    },
+    {
+      "date": "2026-01-01",
+      "category": "rent",
+      "amount": 25000
+    },
+    {
+      "date": "2026-01-02",
+      "category": "emi",
+      "amount": 8000
+    },
+    {
+      "date": "2026-01-03",
+      "category": "insurance",
+      "amount": 2500
+    },
+    {
+      "date": "2026-01-04",
+      "category": "utilities",
+      "amount": 2000
+    },
+    {
+      "date": "2026-01-06",
+      "category": "groceries",
+      "amount": 4200
+    },
+    {
+      "date": "2026-01-07",
+      "category": "transport",
+      "amount": 3500
+    },
+    {
+      "date": "2026-01-09",
+      "category": "dining",
+      "amount": 2200
+    },
+    {
+      "date": "2026-01-11",
+      "category": "misc",
+      "amount": -5000
+    },
+    {
+      "date": "2026-01-13",
+      "category": "groceries",
+      "amount": 3800
+    },
+    {
+      "date": "2026-01-15",
+      "category": "utilities",
+      "amount": 1500
+    },
+    {
+      "date": "2026-01-16",
+      "category": "dining",
+      "amount": 1800
+    },
+    {
+      "date": "2026-01-18",
+      "category": "transport",
+      "amount": 2500
+    },
+    {
+      "date": "2026-01-20",
+      "category": "groceries",
+      "amount": 2100
+    },
+    {
+      "date": "2026-01-22",
+      "category": "misc",
+      "amount": 4000
+    },
+    {
+      "date": "2026-01-24",
+      "category": "dining",
+      "amount": 1000
+    },
+    {
+      "date": "2026-01-27",
+      "category": "groceries",
+      "amount": 1900
+    },
+    {
+      "date": "2026-01-29",
+      "category": "misc",
+      "amount": 2000
+    },
+    {
+      "date": "2026-02-01",
+      "category": "rent",
+      "amount": 25000
+    },
+    {
+      "date": "2026-02-02",
+      "category": "emi",
+      "amount": 8000
+    },
+    {
+      "date": "2026-02-03",
+      "category": "insurance",
+      "amount": 2500
+    },
+    {
+      "date": "2026-02-04",
+      "category": "utilities",
+      "amount": 2000
+    },
+    {
+      "date": "2026-02-06",
+      "category": "groceries",
+      "amount": 4200
+    },
+    {
+      "date": "2026-02-07",
+      "category": "transport",
+      "amount": 3500
+    },
+    {
+      "date": "2026-02-09",
+      "category": "dining",
+      "amount": 2200
+    },
+    {
+      "date": "2026-02-11",
+      "category": "misc",
+      "amount": 10000
+    },
+    {
+      "date": "2026-02-13",
+      "category": "groceries",
+      "amount": 3800
+    },
+    {
+      "date": "2026-02-15",
+      "category": "utilities",
+      "amount": 1500
+    },
+    {
+      "date": "2026-02-16",
+      "category": "dining",
+      "amount": 1800
+    },
+    {
+      "date": "2026-02-18",
+      "category": "transport",
+      "amount": 2500
+    },
+    {
+      "date": "2026-02-20",
+      "category": "groceries",
+      "amount": 2100
+    },
+    {
+      "date": "2026-02-22",
+      "category": "misc",
+      "amount": 4000
+    },
+    {
+      "date": "2026-02-24",
+      "category": "dining",
+      "amount": 1000
+    },
+    {
+      "date": "2026-02-27",
+      "category": "groceries",
+      "amount": 1900
+    },
+    {
+      "date": "2026-02-29",
+      "category": "misc",
+      "amount": 2000
+    },
+    {
+      "date": "2026-03-01",
+      "category": "rent",
+      "amount": 25000
+    },
+    {
+      "date": "2026-03-02",
+      "category": "emi",
+      "amount": 8000
+    },
+    {
+      "date": "2026-03-03",
+      "category": "insurance",
+      "amount": 2500
+    },
+    {
+      "date": "2026-03-04",
+      "category": "utilities",
+      "amount": 2000
+    },
+    {
+      "date": "2026-03-06",
+      "category": "groceries",
+      "amount": 4200
+    },
+    {
+      "date": "2026-03-07",
+      "category": "transport",
+      "amount": 3500
+    },
+    {
+      "date": "2026-03-09",
+      "category": "dining",
+      "amount": 2200
+    },
+    {
+      "date": "2026-03-11",
+      "category": "misc",
+      "amount": 4000
+    },
+    {
+      "date": "2026-03-13",
+      "category": "groceries",
+      "amount": 3800
+    },
+    {
+      "date": "2026-03-15",
+      "category": "utilities",
+      "amount": 1500
+    },
+    {
+      "date": "2026-03-16",
+      "category": "dining",
+      "amount": 1800
+    },
+    {
+      "date": "2026-03-18",
+      "category": "transport",
+      "amount": 2500
+    },
+    {
+      "date": "2026-03-20",
+      "category": "groceries",
+      "amount": 2100
+    },
+    {
+      "date": "2026-03-22",
+      "category": "misc",
+      "amount": 4000
+    },
+    {
+      "date": "2026-03-24",
+      "category": "dining",
+      "amount": 1000
+    },
+    {
+      "date": "2026-03-27",
+      "category": "groceries",
+      "amount": 1900
+    },
+    {
+      "date": "2026-03-29",
+      "category": "misc",
+      "amount": 2000
+    },
+    {
+      "date": "2026-04-01",
+      "category": "rent",
+      "amount": 25000
+    },
+    {
+      "date": "2026-04-02",
+      "category": "emi",
+      "amount": 8000
+    },
+    {
+      "date": "2026-04-03",
+      "category": "insurance",
+      "amount": 2500
+    },
+    {
+      "date": "2026-04-04",
+      "category": "utilities",
+      "amount": 2000
+    },
+    {
+      "date": "2026-04-06",
+      "category": "groceries",
+      "amount": 4200
+    },
+    {
+      "date": "2026-04-07",
+      "category": "transport",
+      "amount": 3500
+    },
+    {
+      "date": "2026-04-09",
+      "category": "dining",
+      "amount": 2200
+    },
+    {
+      "date": "2026-04-11",
+      "category": "misc",
+      "amount": 22000
+    },
+    {
+      "date": "2026-04-13",
+      "category": "groceries",
+      "amount": 3800
+    },
+    {
+      "date": "2026-04-15",
+      "category": "utilities",
+      "amount": 1500
+    },
+    {
+      "date": "2026-04-16",
+      "category": "dining",
+      "amount": 1800
+    },
+    {
+      "date": "2026-04-18",
+      "category": "transport",
+      "amount": 2500
+    },
+    {
+      "date": "2026-04-20",
+      "category": "groceries",
+      "amount": 2100
+    },
+    {
+      "date": "2026-04-22",
+      "category": "misc",
+      "amount": 4000
+    },
+    {
+      "date": "2026-04-24",
+      "category": "dining",
+      "amount": 1000
+    },
+    {
+      "date": "2026-04-27",
+      "category": "groceries",
+      "amount": 1900
+    },
+    {
+      "date": "2026-04-29",
+      "category": "misc",
+      "amount": 2000
+    },
+    {
+      "date": "2026-05-01",
+      "category": "rent",
+      "amount": 25000
+    },
+    {
+      "date": "2026-05-02",
+      "category": "emi",
+      "amount": 8000
+    },
+    {
+      "date": "2026-05-03",
+      "category": "insurance",
+      "amount": 2500
+    },
+    {
+      "date": "2026-05-04",
+      "category": "utilities",
+      "amount": 2000
+    },
+    {
+      "date": "2026-05-06",
+      "category": "groceries",
+      "amount": 4200
+    },
+    {
+      "date": "2026-05-07",
+      "category": "transport",
+      "amount": 3500
+    },
+    {
+      "date": "2026-05-09",
+      "category": "dining",
+      "amount": 2200
+    },
+    {
+      "date": "2026-05-11",
+      "category": "misc",
+      "amount": -8000
+    },
+    {
+      "date": "2026-05-13",
+      "category": "groceries",
+      "amount": 3800
+    },
+    {
+      "date": "2026-05-15",
+      "category": "utilities",
+      "amount": 1500
+    },
+    {
+      "date": "2026-05-16",
+      "category": "dining",
+      "amount": 1800
+    },
+    {
+      "date": "2026-05-18",
+      "category": "transport",
+      "amount": 2500
+    },
+    {
+      "date": "2026-05-20",
+      "category": "groceries",
+      "amount": 2100
+    },
+    {
+      "date": "2026-05-22",
+      "category": "misc",
+      "amount": 4000
+    },
+    {
+      "date": "2026-05-24",
+      "category": "dining",
+      "amount": 1000
+    },
+    {
+      "date": "2026-05-27",
+      "category": "groceries",
+      "amount": 1900
+    },
+    {
+      "date": "2026-05-29",
+      "category": "misc",
+      "amount": 2000
+    },
+    {
+      "date": "2026-06-01",
+      "category": "rent",
+      "amount": 25000
+    },
+    {
+      "date": "2026-06-02",
+      "category": "emi",
+      "amount": 8000
+    },
+    {
+      "date": "2026-06-03",
+      "category": "insurance",
+      "amount": 2500
+    },
+    {
+      "date": "2026-06-04",
+      "category": "utilities",
+      "amount": 2000
+    },
+    {
+      "date": "2026-06-06",
+      "category": "groceries",
+      "amount": 4200
+    },
+    {
+      "date": "2026-06-07",
+      "category": "transport",
+      "amount": 3500
+    },
+    {
+      "date": "2026-06-09",
+      "category": "dining",
+      "amount": 2200
+    },
+    {
+      "date": "2026-06-11",
+      "category": "misc",
+      "amount": 7000
+    },
+    {
+      "date": "2026-06-13",
+      "category": "groceries",
+      "amount": 3800
+    },
+    {
+      "date": "2026-06-15",
+      "category": "utilities",
+      "amount": 1500
+    },
+    {
+      "date": "2026-06-16",
+      "category": "dining",
+      "amount": 1800
+    },
+    {
+      "date": "2026-06-18",
+      "category": "transport",
+      "amount": 2500
+    },
+    {
+      "date": "2026-06-20",
+      "category": "groceries",
+      "amount": 2100
+    },
+    {
+      "date": "2026-06-22",
+      "category": "misc",
+      "amount": 4000
+    },
+    {
+      "date": "2026-06-24",
+      "category": "dining",
+      "amount": 1000
+    },
+    {
+      "date": "2026-06-27",
+      "category": "groceries",
+      "amount": 1900
+    },
+    {
+      "date": "2026-06-29",
+      "category": "misc",
+      "amount": 2000
+    },
+    {
+      "date": "2026-07-01",
+      "category": "rent",
+      "amount": 25000
+    },
+    {
+      "date": "2026-07-02",
+      "category": "emi",
+      "amount": 8000
+    },
+    {
+      "date": "2026-07-03",
+      "category": "insurance",
+      "amount": 2500
+    },
+    {
+      "date": "2026-07-04",
+      "category": "utilities",
+      "amount": 2000
+    },
+    {
+      "date": "2026-07-06",
+      "category": "groceries",
+      "amount": 4200
+    },
+    {
+      "date": "2026-07-07",
+      "category": "transport",
+      "amount": 3500
+    },
+    {
+      "date": "2026-07-09",
+      "category": "dining",
+      "amount": 2200
+    },
+    {
+      "date": "2026-07-11",
+      "category": "misc",
+      "amount": 7000
+    },
+    {
+      "date": "2026-07-13",
+      "category": "groceries",
+      "amount": 3800
+    },
+    {
+      "date": "2026-07-15",
+      "category": "utilities",
+      "amount": 1500
+    },
+    {
+      "date": "2026-07-16",
+      "category": "dining",
+      "amount": 1800
+    },
+    {
+      "date": "2026-07-18",
+      "category": "transport",
+      "amount": 2500
+    },
+    {
+      "date": "2026-07-20",
+      "category": "groceries",
+      "amount": 2100
+    },
+    {
+      "date": "2026-07-22",
+      "category": "misc",
+      "amount": 4000
+    },
+    {
+      "date": "2026-07-24",
+      "category": "dining",
+      "amount": 1000
+    },
+    {
+      "date": "2026-07-27",
+      "category": "groceries",
+      "amount": 1900
+    },
+    {
+      "date": "2026-07-29",
+      "category": "misc",
+      "amount": 2000
+    }
   ],
-
   "investment_events": [
     {
       "date": "2023-11-10",
@@ -79,6 +1090,5 @@
       "days_after_drop": 3
     }
   ],
-
   "ground_truth_risk": "moderate"
 }

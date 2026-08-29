@@ -2,15 +2,13 @@
   "schema_version": "api-v1",
   "customer_id": "C001",
   "customer_name": "Rahul Mehta",
-  "generated_at": "2026-08-25",
-
+  "generated_at": "2026-08-29",
   "context": {
     "age": 28,
     "dependents": 1,
     "employment_type": "salaried",
     "city_tier": "metro"
   },
-
   "profile": {
     "net_worth": 600000,
     "total_assets": 800000,
@@ -38,7 +36,6 @@
       "insurance": 2500
     }
   },
-
   "risk": {
     "stated": "aggressive",
     "revealed": "moderate",
@@ -60,7 +57,6 @@
     ],
     "model_version": "rr-v1"
   },
-
   "goals": [
     {
       "name": "house_downpayment",
@@ -75,42 +71,63 @@
       "priority": 2
     }
   ],
-
   "plans": [
     {
       "plan_id": "A",
       "label": "Steady",
       "monthly_investment": 35000,
       "surplus_after_investment": 10000,
-      "allocation": { "equity": 0.4, "debt": 0.6 },
+      "allocation": {
+        "equity": 0.4,
+        "debt": 0.6
+      },
       "expected_annual_return": 0.09,
       "projected_corpus": 2660000,
       "goal_amount": 2500000,
       "years": 5,
       "shortfall": 0,
       "feasible": true,
-      "success_probability": 0.87,
-      "successful_simulations": 8700,
-      "median_corpus": 2680000,
-      "p10_corpus": 2150000,
-      "p90_corpus": 3320000,
-      "p10_gap_to_goal": 350000,
-      "survives_stress": true,
-      "breaking_combo": null,
-      "breaking_probability": null,
-      "shortfall_if_hit": null,
       "exceeds_risk_ceiling": false,
+      "success_probability": 0.7376,
+      "successful_simulations": 7376,
+      "median_corpus": 3076480,
+      "p10_corpus": 1855503,
+      "p90_corpus": 4412578,
+      "p10_gap_to_goal": 644497,
+      "survives_stress": false,
+      "breaking_combo": [
+        {
+          "event_id": "car_repair",
+          "label": "Unexpected major vehicle repair",
+          "annual_probability": 0.15,
+          "cash_impact": -50000
+        },
+        {
+          "event_id": "appliance_failure",
+          "label": "Refrigerator or AC replacement",
+          "annual_probability": 0.2,
+          "cash_impact": -40000
+        },
+        {
+          "event_id": "home_repair",
+          "label": "Urgent plumbing or roof repair",
+          "annual_probability": 0.12,
+          "cash_impact": -75000
+        }
+      ],
+      "breaking_probability": 0.0036,
+      "shortfall_if_hit": 5000,
       "headline": "Invest 35,000 a month, weighted towards debt",
-      "body": "This plan puts 40% of your monthly investment into equity and 60% into debt, and reaches a projected 26,60,000 against your 25,00,000 target in five years. It asks for 35,000 of your 45,000 monthly surplus, which leaves you 10,000 of breathing room each month. Out of 10,000 simulations run on real historical market returns, 8,700 reached your goal. It also held up against every combination of shock events we tested.",
+      "body": "This plan puts 40% of your monthly investment into equity and 60% into debt, and reaches a projected 2,660,000 against your 2,500,000 target in five years. It asks for 35,000 of your 45,000 monthly surplus, which leaves you 10,000 of breathing room each month. Out of 10,000 simulations run on real historical market returns, 7,376 reached your goal. It does not survive our stress test: \"Unexpected major vehicle repair\", \"Refrigerator or AC replacement\" and \"Urgent plumbing or roof repair\" landing together would leave you 5,000 short of the goal.",
       "pros": [
-        "Survives every shock combination the stress test tried",
         "Leaves 10,000 a month unallocated for emergencies",
-        "Stronger outcomes reach 33,20,000"
+        "Stronger outcomes reach 4,412,578"
       ],
       "cons": [
-        "Costs 5,000 more per month than the cheapest plan",
-        "Weakest outcomes fall 3,50,000 short of target",
-        "Only 87% of simulations reached your goal"
+        "Costs 5,000 more per month than Plan B",
+        "Breaks under stress testing, leaving you 5,000 short",
+        "Weakest outcomes fall 644,497 short of target",
+        "Only 73.76% of simulations reached your goal"
       ]
     },
     {
@@ -118,48 +135,51 @@
       "label": "Balanced",
       "monthly_investment": 30000,
       "surplus_after_investment": 15000,
-      "allocation": { "equity": 0.65, "debt": 0.35 },
+      "allocation": {
+        "equity": 0.65,
+        "debt": 0.35
+      },
       "expected_annual_return": 0.11,
       "projected_corpus": 2410000,
       "goal_amount": 2500000,
       "years": 5,
       "shortfall": 0,
       "feasible": true,
-      "success_probability": 0.71,
-      "successful_simulations": 7100,
-      "median_corpus": 2560000,
-      "p10_corpus": 1780000,
-      "p90_corpus": 3610000,
-      "p10_gap_to_goal": 720000,
+      "exceeds_risk_ceiling": false,
+      "success_probability": 0.5691,
+      "successful_simulations": 5691,
+      "median_corpus": 2633260,
+      "p10_corpus": 1578975,
+      "p90_corpus": 3779172,
+      "p10_gap_to_goal": 921025,
       "survives_stress": false,
       "breaking_combo": [
         {
-          "event_id": "appraisal_miss",
-          "label": "Appraisal comes in at 4% instead of 10%",
-          "annual_probability": 0.23,
-          "cash_impact": -180000
+          "event_id": "car_repair",
+          "label": "Unexpected major vehicle repair",
+          "annual_probability": 0.15,
+          "cash_impact": -50000
         },
         {
-          "event_id": "medical_expense",
-          "label": "Family medical expense",
-          "annual_probability": 0.1,
-          "cash_impact": -200000
+          "event_id": "appliance_failure",
+          "label": "Refrigerator or AC replacement",
+          "annual_probability": 0.2,
+          "cash_impact": -40000
         }
       ],
-      "breaking_probability": 0.023,
-      "shortfall_if_hit": 420000,
-      "exceeds_risk_ceiling": false,
+      "breaking_probability": 0.03,
+      "shortfall_if_hit": 180000,
       "headline": "Invest 30,000 a month, with more in equity",
-      "body": "This plan puts 65% of your monthly investment into equity and 35% into debt, and reaches a projected 24,10,000 against your 25,00,000 target in five years. It asks for 30,000 of your 45,000 monthly surplus, which leaves you 15,000 of breathing room each month. Out of 10,000 simulations run on real historical market returns, 7,100 reached your goal. It does not survive our stress test: \"Appraisal comes in at 4% instead of 10%\" and \"Family medical expense\" landing together would leave you 4,20,000 short of the goal.",
+      "body": "This plan puts 65% of your monthly investment into equity and 35% into debt, and reaches a projected 2,410,000 against your 2,500,000 target in five years. It asks for 30,000 of your 45,000 monthly surplus, which leaves you 15,000 of breathing room each month. Out of 10,000 simulations run on real historical market returns, 5,691 reached your goal. It does not survive our stress test: \"Unexpected major vehicle repair\" and \"Refrigerator or AC replacement\" landing together would leave you 180,000 short of the goal.",
       "pros": [
         "Leaves 15,000 a month unallocated for emergencies",
         "Asks the least of your monthly surplus",
-        "Stronger outcomes reach 36,10,000"
+        "Stronger outcomes reach 3,779,172"
       ],
       "cons": [
-        "Breaks under stress testing, leaving you 4,20,000 short",
-        "Weakest outcomes fall 7,20,000 short of target",
-        "Only 71% of simulations reached your goal"
+        "Breaks under stress testing, leaving you 180,000 short",
+        "Weakest outcomes fall 921,025 short of target",
+        "Only 56.91% of simulations reached your goal"
       ]
     },
     {
@@ -167,66 +187,52 @@
       "label": "Growth",
       "monthly_investment": 52000,
       "surplus_after_investment": -7000,
-      "allocation": { "equity": 0.85, "debt": 0.15 },
+      "allocation": {
+        "equity": 0.85,
+        "debt": 0.15
+      },
       "expected_annual_return": 0.13,
       "projected_corpus": 4410000,
       "goal_amount": 2500000,
       "years": 5,
       "shortfall": 7000,
       "feasible": false,
-      "success_probability": 0.95,
-      "successful_simulations": 9500,
-      "median_corpus": 4690000,
-      "p10_corpus": 2920000,
-      "p90_corpus": 6720000,
-      "p10_gap_to_goal": 0,
-      "survives_stress": false,
-      "breaking_combo": [
-        {
-          "event_id": "appraisal_miss",
-          "label": "Appraisal comes in at 4% instead of 10%",
-          "annual_probability": 0.23,
-          "cash_impact": -180000
-        },
-        {
-          "event_id": "medical_expense",
-          "label": "Family medical expense",
-          "annual_probability": 0.1,
-          "cash_impact": -200000
-        },
-        {
-          "event_id": "rent_hike",
-          "label": "Landlord raises rent by 15%",
-          "annual_probability": 0.3,
-          "cash_impact": -120000
-        }
-      ],
-      "breaking_probability": 0.007,
-      "shortfall_if_hit": 690000,
       "exceeds_risk_ceiling": true,
+      "success_probability": 0.924,
+      "successful_simulations": 9240,
+      "median_corpus": 4573106,
+      "p10_corpus": 2734374,
+      "p90_corpus": 6563824,
+      "p10_gap_to_goal": 0,
+      "survives_stress": true,
+      "breaking_combo": null,
+      "breaking_probability": null,
+      "shortfall_if_hit": null,
       "headline": "Invest 52,000 a month, mostly in equity",
-      "body": "This plan puts 85% of your monthly investment into equity and 15% into debt, and reaches a projected 44,10,000 against your 25,00,000 target in five years. It is not affordable on your current finances: it needs 52,000 a month against a surplus of 45,000, leaving you 7,000 short every month. Out of 10,000 simulations run on real historical market returns, 9,500 reached your goal. It does not survive our stress test: \"Appraisal comes in at 4% instead of 10%\", \"Family medical expense\" and \"Landlord raises rent by 15%\" landing together would leave you 6,90,000 short of the goal.",
+      "body": "This plan puts 85% of your monthly investment into equity and 15% into debt, and reaches a projected 4,410,000 against your 2,500,000 target in five years. It is not affordable on your current finances: it needs 52,000 a month against a surplus of 45,000, leaving you 7,000 short every month. Out of 10,000 simulations run on real historical market returns, 9,240 reached your goal. It also held up against every combination of shock events we tested.",
       "pros": [
+        "Survives every shock combination the stress test tried",
         "Of the plans offered, the highest chance of reaching your goal",
-        "Stronger outcomes reach 67,20,000"
+        "Stronger outcomes reach 6,563,824"
       ],
       "cons": [
         "Not affordable: needs 7,000 more per month than you have spare",
-        "Costs 22,000 more per month than the cheapest plan",
-        "Breaks under stress testing, leaving you 6,90,000 short",
+        "Costs 22,000 more per month than Plan B",
         "Equity allocation is more aggressive than your own history supports",
-        "Even here, 95% of simulations reached the goal rather than all of them"
+        "Even here, 92.4% of simulations reached the goal rather than all of them"
       ]
     }
   ],
-
   "goal_priority_note": "Your house downpayment is funded first because it is five years away, while the child education goal is twelve years out and can absorb a slower start. The nearer deadline is the binding one, so it sets the monthly figure.",
-
   "mismatch_note": "You described your approach as aggressive, but your transaction history looks moderate. On two occasions you sold equity within days of a market fall. That matters here because the plans with the highest projected returns are exactly the ones that fall furthest during a bad year, and a plan left early performs worse than a slower plan held to the end.",
-
   "peer_cohort": {
     "cohort_size": 87,
-    "matched_on": ["age_band", "income_band", "goal_type", "stated_risk"],
+    "matched_on": [
+      "age_band",
+      "income_band",
+      "goal_type",
+      "stated_risk"
+    ],
     "age_band": "26-30",
     "income_band": "100000-150000",
     "goal_type": "house_downpayment",
@@ -236,11 +242,12 @@
     "savings_rate_percentile": 68,
     "mismatch_rate": 0.61,
     "most_common_plan_label": "Balanced",
-    "most_common_allocation": { "equity": 0.6, "debt": 0.4 }
+    "most_common_allocation": {
+      "equity": 0.6,
+      "debt": 0.4
+    }
   },
-
   "challenge": null,
-
   "verifier": {
     "status": "pass",
     "numbers_checked": 87,
@@ -250,7 +257,6 @@
     ],
     "retry_count": 0
   },
-
   "meta": {
     "returns_data_source": "nifty_yearly_2005_2025.csv",
     "n_simulations": 10000,

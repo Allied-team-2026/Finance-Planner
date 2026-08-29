@@ -22,7 +22,18 @@ SCHEMA_VERSION = "api-v1"
 # Add a stage name here once its engine passes its own test. Anything not listed
 # runs on its mock. Keep this list honest - a stage listed here that returns
 # rubbish is worse than a mock, because the response still looks complete.
-REAL_ENGINES = set()
+PRODUCTION_ENGINES = {
+    "profile",
+    "features",
+    "risk",
+    "plans",
+    "montecarlo",
+    "stress",
+    "cohort",
+    "explanation",
+    "verify",
+}
+REAL_ENGINES = PRODUCTION_ENGINES.copy()
 
 # stage name -> (mock file, "module:function" for the real engine)
 STAGES = {
@@ -33,10 +44,10 @@ STAGES = {
     "plans":       ("plans_out.json",       "engines.plan_generator:generate"),
     "montecarlo":  ("montecarlo_out.json",  "engines.montecarlo:simulate"),
     "stress":      ("stress_out.json",      "engines.stress_test:run"),
-    "cohort":      ("peer_cohort_out.json", "engines.peer_cohort:summarise"),
+    "cohort":      ("peer_cohort_out.json", "engines.peer_cohort:run"),
     "explanation": ("explanation_out.json", "agents.explanation:explain"),
     "challenge":   ("challenge_out.json",   "agents.challenger:challenge"),
-    "verify":      ("verifier_out.json",    "engines.verifier:verify"),
+    "verify":      ("verifier_out.json",    "agents.verifier:verify"),
 }
 
 
@@ -102,7 +113,7 @@ def compare(plans):
     }
 
 
-def build_bundle(customer, profile, features, risk, plans, montecarlo, stress):
+def build_bundle(customer, profile, features, risk, plans, montecarlo, stress, cohort):
     """Section 7. The only payload any agent ever sees.
 
     Identifiers are dropped here and nowhere else, so there is exactly one place
@@ -130,6 +141,7 @@ def build_bundle(customer, profile, features, risk, plans, montecarlo, stress):
         "plans": merged,
         "comparisons": compare(merged),
         "n_simulations": montecarlo["n_simulations"],
+        "peer_cohort": cohort,
     }
 
 
@@ -209,23 +221,26 @@ def run_engines(customer_id, extra_monthly_savings=0):
     # risk prediction. Today no feature reads the surplus, so the order does not
     # change any number - it stops the day someone adds one.
     features = run("features", customer, profile)
-    risk = run("risk", features)
+    risk = run("risk", features, customer["stated_risk"])
 
     if extra_monthly_savings:
         profile = dict(profile)
         profile["monthly_surplus"] += extra_monthly_savings
 
-    plans = run("plans", profile, risk)
+    plans = run("plans", profile, risk, customer.get("goals", []))
     montecarlo = run("montecarlo", plans)
-    stress = run("stress", plans, profile)
-    cohort = run("cohort", customer, profile)
+    stress = run("stress", plans)
+    
+    from engines.synthetic_data import generate_dataset
+    customers = generate_dataset(1000, seed=42)
+    cohort = run("cohort", customers, customer, profile, risk)
 
     return {
         "customer": customer, "profile": profile, "features": features,
         "risk": risk, "plans": plans, "montecarlo": montecarlo,
         "stress": stress, "cohort": cohort,
         "bundle": build_bundle(customer, profile, features, risk,
-                               plans, montecarlo, stress),
+                               plans, montecarlo, stress, cohort),
     }
 
 
@@ -237,8 +252,30 @@ def run_stages(customer_id, extra_monthly_savings=0):
     on a live demo.
     """
     s = run_engines(customer_id, extra_monthly_savings)
-    s["explanation"] = run("explanation", s["bundle"])
-    s["verify"] = run("verify", s["explanation"], s["bundle"])
+    
+    max_attempts = 3
+    previous_failures = None
+    
+    for attempt in range(max_attempts):
+        if previous_failures:
+            s["explanation"] = run("explanation", s["bundle"], previous_failures)
+        else:
+            s["explanation"] = run("explanation", s["bundle"])
+            
+        s["verify"] = run("verify", s["explanation"], s["bundle"])
+        
+        if s["verify"]["status"] == "pass":
+            break
+            
+        # Collect failures for next attempt
+        previous_failures = s["verify"].get("unverified_numbers", []) + s["verify"].get("suitability_flags", [])
+        if not previous_failures:
+            previous_failures = ["The previous response failed structural or numeric verification."]
+    else:
+        from agents.explanation import fallback_explain
+        s["explanation"] = fallback_explain(s["bundle"])
+        s["verify"] = run("verify", s["explanation"], s["bundle"])
+        
     return s
 
 
@@ -252,5 +289,13 @@ def make_plan(customer_id, extra_monthly_savings=0):
 
 def make_challenge(customer_id, chosen_plan_id):
     """Runs only after the customer picks a plan."""
-    bundle = run_engines(customer_id)["bundle"]
-    return run("challenge", bundle, chosen_plan_id)
+    s = run_stages(customer_id)
+    
+    # validate chosen_plan_id
+    if not any(p["plan_id"] == chosen_plan_id for p in s["plans"]["plans"]):
+        raise ValueError(f"Invalid chosen_plan_id: {chosen_plan_id}")
+        
+    challenge = run("challenge", s["bundle"], s["explanation"], s["verify"], chosen_plan_id)
+    return build_response(s["customer"], s["profile"], s["risk"], s["plans"],
+                          s["montecarlo"], s["stress"], s["explanation"],
+                          s["cohort"], s["verify"], challenge=challenge)

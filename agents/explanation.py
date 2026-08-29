@@ -375,30 +375,262 @@ def _mismatch_note(prose, bundle):
 # ------------------------------------------------------------------- public
 
 
-def explain(bundle):
-    """Section 8. Turn plan_bundle into readable plan text.
+def build_explanation_payload(bundle):
+    """
+    Transforms the internal bundle into the exact trimmed structure required
+    by the Explanation Agent.
+    """
+    payload = {
+        "context": bundle.get("context", {}),
+        "profile": bundle.get("profile", {}),
+        "risk": bundle.get("risk", {}),
+        "goals": bundle.get("goals", []),
+        "plans": bundle.get("plans", []),
+        "comparisons": bundle.get("comparisons", {}),
+        "n_simulations": bundle.get("n_simulations"),
+        "peer_cohort": bundle.get("peer_cohort")
+    }
+        
+    forbidden_keys = {
+        "customer_id", "name", "customer_name", "account_numbers", 
+        "transactions", "investment_events", "individual_peers", 
+        "ground_truth_risk"
+    }
+    
+    def clean(obj):
+        if isinstance(obj, dict):
+            return {k: clean(v) for k, v in obj.items() if k not in forbidden_keys}
+        elif isinstance(obj, list):
+            return [clean(v) for v in obj]
+        return obj
 
+    return clean(payload)
+
+from agents.numeric import extract_numbers_with_paths, validate_prose_numbers
+
+def explain(bundle, previous_failures=None):
+    """Section 8. Turn plan_bundle into readable plan text.
+    
     Called by the orchestrator as `agents.explanation:explain`.
     """
-    if not bundle.get("plans"):
-        raise MissingField("payload has no plans to explain")
+    import os
+    import json
+    
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        raise ValueError("GROQ_API_KEY environment variable is not set")
+        
+    try:
+        from groq import Groq
+    except ImportError:
+        raise ImportError("groq package is required. Run 'pip install groq'")
+        
+    payload = build_explanation_payload(bundle)
+    
+    system_prompt = """You are a financial explanation agent.
+Your task is to explain the financial plans provided in the payload in human-readable language.
 
-    prose = Prose(bundle)
+STEP 1
+Create exactly one explanation object for each plan in the input (A, B, C).
+The output `plans_text` MUST contain exactly the same plan IDs as the input plans, in the same order. Missing a plan is an error.
+
+STEP 2
+For each plan, explain ONLY the most decision-relevant facts:
+- monthly investment, allocation, projected corpus, goal/feasibility, Monte Carlo success probability
+- P10/P90 range when useful, stress result when useful
+- one or two meaningful pros, one or two meaningful cons
+
+Tell the model to prefer concise explanations. For each plan:
+- 1 concise headline
+- 2 to 4 sentences in body
+- 1 to 3 pros
+- 1 to 3 cons
+
+Avoid repeating the same numbers across every sentence. Do not mention irrelevant internal fields. Keep it concise and readable. Do NOT dump every numeric field.
+
+STEP 3
+Add `goal_priority_note`: Explain the priority-1 goal using only supplied information.
+
+STEP 4
+Add `mismatch_note`: Explain stated vs revealed risk and relevant evidence.
+
+STEP 5
+Add `peer_cohort_note`: ONLY IF the payload contains a non-null peer cohort, explain the peer cohort as context, NOT as a recommendation. Do NOT invent peer data. If peer cohort is null, return exactly "No sufficiently large peer cohort was available."
+
+RULES
+Use ONLY numbers present in the supplied payload. Never invent or calculate numbers.
+Do not calculate percentages from decimals, simulation counts from probabilities, shortfalls, investment deltas, savings rates, breaking probabilities, or corpus values. Quote supplied numbers exactly as they appear in the payload.
+Never identify the customer.
+In the "numbers_used" array, list ONLY the exact numbers you actually cited in your explanation text. Do not list every number from the payload. Do not put structural labels such as 10th percentile, 90th percentile, p10, or p90 into numbers_used.
+"""
+
+    if previous_failures:
+        failure_msgs = "\n".join(f"- {f}" for f in previous_failures)
+        system_prompt += f"\n\nCRITICAL RETRY FEEDBACK:\nYour previous response failed verification due to the following issues:\n{failure_msgs}\n\nYou MUST correct these issues. Do NOT repeat the invalid claims. Use the authoritative bundle exactly and do not invent new values."
+
+    model_name = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
+    
+    schema = {
+        "type": "object",
+        "properties": {
+            "plans_text": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "plan_id": {"type": "string"},
+                        "headline": {"type": "string"},
+                        "body": {"type": "string"},
+                        "pros": {"type": "array", "items": {"type": "string"}},
+                        "cons": {"type": "array", "items": {"type": "string"}}
+                    },
+                    "required": ["plan_id", "headline", "body", "pros", "cons"],
+                    "additionalProperties": False
+                }
+            },
+            "goal_priority_note": {"type": "string"},
+            "mismatch_note": {"type": "string"},
+            "peer_cohort_note": {"type": "string"},
+            "numbers_used": {"type": "array", "items": {"type": "number"}}
+        },
+        "required": ["plans_text", "goal_priority_note", "mismatch_note", "peer_cohort_note", "numbers_used"],
+        "additionalProperties": False
+    }
+
+    client = Groq(api_key=api_key)
+    response = client.chat.completions.create(
+        model=model_name,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": json.dumps(payload)}
+        ],
+        response_format={
+            "type": "json_schema",
+            "json_schema": {
+                "name": "explanation_response",
+                "strict": True,
+                "schema": schema
+            }
+        },
+        temperature=0.0,
+        max_tokens=4000
+    )
+    
+    result = json.loads(response.choices[0].message.content)
+    
+    # 1. Structure validation
+    if "plans_text" not in result or not isinstance(result["plans_text"], list):
+        raise ValueError("Missing or invalid 'plans_text'")
+        
+    input_plan_ids = [p.get("plan_id") for p in payload.get("plans", [])]
+    output_plan_ids = [pt.get("plan_id") for pt in result["plans_text"]]
+    
+    if input_plan_ids != output_plan_ids:
+        raise ValueError(f"Plan ID mismatch. Expected exactly {input_plan_ids}, but got {output_plan_ids}")
+        
+    for pt in result["plans_text"]:
+        for f in ["plan_id", "headline", "body", "pros", "cons"]:
+            if f not in pt:
+                raise ValueError(f"Missing required field in plan_text: {f}")
+        if not isinstance(pt["headline"], str) or not isinstance(pt["body"], str):
+            raise ValueError("headline and body must be strings")
+        if not isinstance(pt["pros"], list) or not isinstance(pt["cons"], list):
+            raise ValueError("pros and cons must be lists")
+            
+    for f in ["goal_priority_note", "mismatch_note"]:
+        if f not in result or not isinstance(result[f], str):
+            raise ValueError(f"Missing or invalid '{f}'")
+    if "numbers_used" not in result or not isinstance(result["numbers_used"], list):
+        raise ValueError("Missing or invalid 'numbers_used'")
+        
+    # 2. Privacy validation
+    result_str = json.dumps(result).lower()
+    forbidden_terms = ["jane", "c001", "g00", "ground_truth_risk", "rahul", "mehta", "account", "transaction", "investment_event"]
+    for term in forbidden_terms:
+        if term in result_str:
+            raise ValueError(f"Privacy violation: '{term}' found in explanation")
+            
+    # 3. Numeric validation
+    numbers_map = extract_numbers_with_paths(payload)
+    
+    # Check explicitly declared numbers_used
+    import math
+    for num in result["numbers_used"]:
+        if not isinstance(num, (int, float)):
+            raise ValueError(f"Invalid number type in numbers_used: {num}")
+        val = float(num)
+        is_allowed = any(
+            math.isclose(val, a, rel_tol=1e-5, abs_tol=1e-5) or 
+            math.isclose(val * 100, a, rel_tol=1e-5, abs_tol=1e-5) or 
+            math.isclose(val / 100, a, rel_tol=1e-5, abs_tol=1e-5) 
+            for a in numbers_map.keys()
+        )
+        if not is_allowed:
+            raise ValueError(f"Unsupported numeric claim: {val} is not in the payload")
+            
+    # Check prose strings
+    for pt in result["plans_text"]:
+        validate_prose_numbers(pt["headline"], numbers_map)
+        validate_prose_numbers(pt["body"], numbers_map)
+        for pro in pt["pros"]:
+            validate_prose_numbers(pro, numbers_map)
+        for con in pt["cons"]:
+            validate_prose_numbers(con, numbers_map)
+            
+    validate_prose_numbers(result["goal_priority_note"], numbers_map)
+    validate_prose_numbers(result["mismatch_note"], numbers_map)
+            
+    return result
+
+def fallback_explain(bundle):
+    """
+    Deterministic fallback when the LLM Explanation fails verification 3 times.
+    Uses only authoritative bundle numbers and strict templates.
+    """
     plans_text = []
-
-    for plan in bundle["plans"]:
+    numbers_used = set()
+    
+    for plan in bundle.get("plans", []):
         pid = plan["plan_id"]
+        inv = plan["monthly_investment"]
+        eq = plan["allocation"]["equity"]
+        dt = plan["allocation"]["debt"]
+        succ = plan["success_probability"]
+        corpus = plan["projected_corpus"]
+        
+        eq_pct_str = _as_percent(eq)
+        dt_pct_str = _as_percent(dt)
+        succ_pct_str = _as_percent(succ)
+        
+        body = (f"This plan requires a monthly investment of {inv:,}. "
+                f"It allocates {eq_pct_str} to equity and {dt_pct_str} to debt. "
+                f"The projected corpus is {corpus:,}. "
+                f"Under the simulated return scenarios, this plan reaches the goal in {succ_pct_str} of simulations.")
+                
+        numbers_used.update([inv, eq, dt, corpus, succ])
+        
+        pros = []
+        cons = []
+        if plan.get("survives_stress"):
+            pros.append("Survived the configured stress-test scenarios.")
+        else:
+            shortfall = plan.get("shortfall_if_hit", 0)
+            cons.append(f"Failed the configured stress-test scenario; shortfall if the breaking combination occurs: {shortfall:,}.")
+            numbers_used.add(shortfall)
+            
         plans_text.append({
             "plan_id": pid,
-            "headline": _headline(prose, pid, plan),
-            "body": _body(prose, pid, plan, bundle),
-            "pros": _pros(prose, pid, plan, bundle),
-            "cons": _cons(prose, pid, plan, bundle),
+            "headline": f"Plan {pid} Strategy",
+            "body": body,
+            "pros": pros,
+            "cons": cons
         })
-
+        
     return {
         "plans_text": plans_text,
-        "goal_priority_note": _goal_priority_note(prose, bundle),
-        "mismatch_note": _mismatch_note(prose, bundle),
-        "numbers_used": _declare(prose.numbers),
+        "goal_priority_note": "Your goals have been prioritized based on their target dates.",
+        "mismatch_note": "Your stated risk profile was compared to your revealed transaction history.",
+        "peer_cohort_note": "Your risk profile was compared to the choices of a similar peer cohort.",
+        "numbers_used": sorted(list(numbers_used))
     }
+

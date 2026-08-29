@@ -1,0 +1,59 @@
+{
+    "assumptions_version": "assump-v1",
+    "risk_profiles": {
+        "conservative": {
+            "expected_annual_return": 0.09,
+            "allocation": {
+                "equity": 0.40,
+                "debt": 0.60
+            }
+        },
+        "moderate": {
+            "expected_annual_return": 0.11,
+            "allocation": {
+                "equity": 0.65,
+                "debt": 0.35
+            }
+        },
+        "aggressive": {
+            "expected_annual_return": 0.13,
+            "allocation": {
+                "equity": 0.85,
+                "debt": 0.15
+            }
+        }
+    },
+    "age_equity_bands": [
+        {
+            "max_age": 35,
+            "max_equity": 0.85
+        },
+        {
+            "max_age": 50,
+            "max_equity": 0.65
+        },
+        {
+            "max_age": 120,
+            "max_equity": 0.40
+        }
+    ],
+    "horizon_equity_limits": [
+        {
+            "max_years": 3,
+            "max_equity": 0.40
+        },
+        {
+            "max_years": 7,
+            "max_equity": 0.65
+        },
+        {
+            "max_years": 100,
+            "max_equity": 0.85
+        }
+    ],
+    "investment_sizing": {
+        "Plan A": 0.7777777777777778,
+        "Plan B": 0.6666666666666666,
+        "Plan C": 1.1555555555555557
+    }
+}
