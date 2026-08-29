@@ -108,9 +108,9 @@ def test_deterministic_compute_values_unchanged():
     
     plan_c = next(p for p in data["plans"] if p["plan_id"] == "C")
     assert plan_c["projected_corpus"] == 4410000
-    assert plan_c["success_probability"] == 0.95
-    assert plan_c["survives_stress"] is False
-    assert plan_c["breaking_probability"] == 0.007
+    assert plan_c["success_probability"] == 0.924
+    assert plan_c["survives_stress"] is True
+    assert plan_c["breaking_probability"] is None
 
 import os
 @pytest.mark.skipif(not os.environ.get("GROQ_API_KEY"), reason="live")

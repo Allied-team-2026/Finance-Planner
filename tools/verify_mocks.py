@@ -226,7 +226,7 @@ for pid, r in st_by.items():
         for e in r["breaking_combo"]:
             prod *= e["annual_probability"]
         check(f"stress {pid} breaking_probability == product of event probabilities",
-              r["breaking_probability"], round(prod, 3))
+              r["breaking_probability"], round(prod, 6))
 
 check("same plan ids across plans / mc / stress",
       sorted(mc_by) == sorted(st_by) == sorted(p["plan_id"] for p in plans["plans"]), True)
@@ -451,13 +451,13 @@ for label, doc in (("explanation", expl), ("challenge", chal)):
 
 NEGATIVE_CASES = [
     ("invented count",
-     "8,700 reached your goal", "8,900 reached your goal"),
+     "7,376 reached your goal", "7,900 reached your goal"),
     ("agent did subtraction",
      "leaves you 10,000 of breathing room", "leaves you 11,000 of breathing room"),
     ("lakh figure slightly off",
-     "projected 26,60,000", "projected 26,70,000"),
+     "projected 2,660,000", "projected 2,670,000"),
     ("percent converted by the agent",
-     "Only 71% of simulations", "Only 72% of simulations"),
+     "Only 56.91% of simulations", "Only 57.91% of simulations"),
     ("plausible but absent number",
      "40% of your monthly investment", "45% of your monthly investment"),
 ]
@@ -477,7 +477,7 @@ for label, original, corrupted in NEGATIVE_CASES:
 # this - 0.71 is a real engine number - so it has to be the claim check that fires.
 chal_text = json.dumps(chal).replace(
     "A plan is only as good as your willingness",
-    "There is a 71% chance you abandon this within seven weeks. A plan is only as good "
+    "There is a 56.91% chance you abandon this within seven weeks. A plan is only as good "
     "as your willingness")
 broken_chal = json.loads(chal_text)
 _, numeric_caught = verify("negative", broken_chal, ["challenge", "evidence_cited"])
