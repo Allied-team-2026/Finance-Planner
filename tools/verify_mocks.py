@@ -553,6 +553,97 @@ for label, doc in (("explanation", expl), ("challenge", chal)):
         notes.append(f"{label} prose contains word numbers the regex cannot check: "
                      + ", ".join(hits))
 
+# ------------------------------------------------- engine vs mock consistency
+
+def compare_dicts(d1, d2, path=""):
+    diffs = []
+    if isinstance(d1, dict) and isinstance(d2, dict):
+        for k in set(d1.keys()) | set(d2.keys()):
+            if k not in d1:
+                diffs.append(f"{path}.{k} missing from engine")
+            elif k not in d2:
+                diffs.append(f"{path}.{k} missing from mock")
+            else:
+                diffs.extend(compare_dicts(d1[k], d2[k], f"{path}.{k}"))
+    elif isinstance(d1, list) and isinstance(d2, list):
+        if len(d1) != len(d2):
+            diffs.append(f"{path} length mismatch: engine {len(d1)} != mock {len(d2)}")
+        else:
+            for i, (v1, v2) in enumerate(zip(d1, d2)):
+                diffs.extend(compare_dicts(v1, v2, f"{path}[{i}]"))
+    elif isinstance(d1, float) and isinstance(d2, float):
+        import math
+        if not math.isclose(d1, d2, rel_tol=1e-5, abs_tol=1e-5):
+            diffs.append(f"{path} mismatch: engine {d1!r} != mock {d2!r}")
+    elif d1 != d2:
+        diffs.append(f"{path} mismatch: engine {d1!r} != mock {d2!r}")
+    return diffs
+
+try:
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+    from orchestrator.pipeline import run
+    
+    engine_out = {}
+    
+    try:
+        engine_out["profile"] = run("profile", cust)
+    except Exception as e:
+        engine_out["profile"] = e
+        
+    try:
+        engine_out["features"] = run("features", cust, prof)
+    except Exception as e:
+        engine_out["features"] = e
+        
+    try:
+        engine_out["risk"] = run("risk", feat, cust["stated_risk"])
+    except Exception as e:
+        engine_out["risk"] = e
+        
+    try:
+        engine_out["plans"] = run("plans", prof, risk, cust.get("goals", []))
+    except Exception as e:
+        engine_out["plans"] = e
+        
+    try:
+        engine_out["montecarlo"] = run("montecarlo", plans)
+    except Exception as e:
+        engine_out["montecarlo"] = e
+        
+    try:
+        engine_out["stress"] = run("stress", plans)
+    except Exception as e:
+        engine_out["stress"] = e
+        
+    try:
+        from engines.synthetic_data import generate_dataset
+        customers = generate_dataset(1000, seed=42)
+        engine_out["cohort"] = run("cohort", customers, cust, prof, risk)
+    except Exception as e:
+        engine_out["cohort"] = e
+    
+    checks = {
+        "profile": prof,
+        "features": feat,
+        "risk": risk,
+        "plans": plans,
+        "montecarlo": mc,
+        "stress": stress,
+        "cohort": cohort
+    }
+    
+    for engine_name, mock_data in checks.items():
+        engine_data = engine_out.get(engine_name)
+        if isinstance(engine_data, Exception):
+            failures.append(f"Engine vs Mock mismatch for {engine_name}: execution failed with {engine_data}")
+        elif engine_data is not None:
+            diffs = compare_dicts(engine_data, mock_data, engine_name)
+            if diffs:
+                failures.append(f"Engine vs Mock mismatch for {engine_name}:")
+                failures.extend(diffs)
+except Exception as e:
+    notes.append(f"Engine vs Mock consistency check failed to set up: {e}")
+
 # ------------------------------------------------- report
 
 print(f"files checked            : {len(files)}")
