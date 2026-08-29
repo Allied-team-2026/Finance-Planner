@@ -577,3 +577,57 @@ In the "numbers_used" array, list ONLY the exact numbers you actually cited in y
     validate_prose_numbers(result["mismatch_note"], numbers_map)
             
     return result
+
+def fallback_explain(bundle):
+    """
+    Deterministic fallback when the LLM Explanation fails verification 3 times.
+    Uses only authoritative bundle numbers and strict templates.
+    """
+    plans_text = []
+    numbers_used = set()
+    
+    for plan in bundle.get("plans", []):
+        pid = plan["plan_id"]
+        inv = plan["monthly_investment"]
+        eq_pct = round(plan["allocation"]["equity"] * 100, 2)
+        dt_pct = round(plan["allocation"]["debt"] * 100, 2)
+        corpus = plan["projected_corpus"]
+        succ_pct = round(plan["success_probability"] * 100, 2)
+        
+        # Determine success probability presentation string without .0 if integer
+        succ_pct_str = f"{int(succ_pct)}" if succ_pct == int(succ_pct) else f"{succ_pct}"
+        eq_pct_str = f"{int(eq_pct)}" if eq_pct == int(eq_pct) else f"{eq_pct}"
+        dt_pct_str = f"{int(dt_pct)}" if dt_pct == int(dt_pct) else f"{dt_pct}"
+        
+        body = (f"This plan requires a monthly investment of {inv:,}. "
+                f"It allocates {eq_pct_str}% to equity and {dt_pct_str}% to debt. "
+                f"The projected corpus is {corpus:,}. "
+                f"Under the simulated return scenarios, this plan reaches the goal in {succ_pct_str}% of simulations.")
+                
+        numbers_used.update([inv, eq_pct, dt_pct, corpus, succ_pct])
+        
+        pros = []
+        cons = []
+        if plan.get("survives_stress"):
+            pros.append("Survived the configured stress-test scenarios.")
+        else:
+            shortfall = plan.get("shortfall_if_hit", 0)
+            cons.append(f"Failed the configured stress-test scenario; shortfall if the breaking combination occurs: {shortfall:,}.")
+            numbers_used.add(shortfall)
+            
+        plans_text.append({
+            "plan_id": pid,
+            "headline": f"Plan {pid} Strategy",
+            "body": body,
+            "pros": pros,
+            "cons": cons
+        })
+        
+    return {
+        "plans_text": plans_text,
+        "goal_priority_note": "Your goals have been prioritized based on their target dates.",
+        "mismatch_note": "Your stated risk profile was compared to your revealed transaction history.",
+        "peer_cohort_note": "Your risk profile was compared to the choices of a similar peer cohort.",
+        "numbers_used": sorted(list(numbers_used))
+    }
+

@@ -471,3 +471,76 @@ def test_live_c001_agent_chain():
     finally:
         pipeline.REAL_ENGINES.clear()
         pipeline.REAL_ENGINES.update(original_real_engines)
+
+def test_explanation_retry_success():
+    """Explanation fails once, then passes. Requires exactly 2 explanation calls and 2 verify calls."""
+    original_run = pipeline.run
+    call_counts = {"explanation": 0, "verify": 0, "run_engines": 0}
+    
+    def spy_run(stage, *args):
+        if stage == "explanation":
+            call_counts["explanation"] += 1
+            if call_counts["explanation"] == 1:
+                return {"status": "bad_explanation"}
+            return load_mock("explanation_out.json")
+        if stage == "verify":
+            call_counts["verify"] += 1
+            if call_counts["verify"] == 1:
+                return {"status": "fail"}
+            return {"status": "pass"}
+        return original_run(stage, *args)
+        
+    pipeline.run = spy_run
+    
+    original_run_engines = pipeline.run_engines
+    def spy_run_engines(cid, ext=0):
+        call_counts["run_engines"] += 1
+        return original_run_engines(cid, ext)
+        
+    pipeline.run_engines = spy_run_engines
+    
+    try:
+        s = pipeline.run_stages("C001")
+        assert call_counts["explanation"] == 2
+        assert call_counts["verify"] == 2
+        assert call_counts["run_engines"] == 1
+        assert s["verify"]["status"] == "pass"
+    finally:
+        pipeline.run = original_run
+        pipeline.run_engines = original_run_engines
+
+def test_explanation_fallback():
+    """Explanation fails 3 times. Fallback is triggered. Compute runs once."""
+    original_run = pipeline.run
+    call_counts = {"explanation": 0, "verify": 0, "run_engines": 0}
+    
+    def spy_run(stage, *args):
+        if stage == "explanation":
+            call_counts["explanation"] += 1
+            return {"status": "bad_explanation"}
+        if stage == "verify":
+            call_counts["verify"] += 1
+            if call_counts["verify"] <= 3:
+                return {"status": "fail"}
+            return {"status": "pass"}
+        return original_run(stage, *args)
+        
+    pipeline.run = spy_run
+    original_run_engines = pipeline.run_engines
+    def spy_run_engines(cid, ext=0):
+        call_counts["run_engines"] += 1
+        return original_run_engines(cid, ext)
+        
+    pipeline.run_engines = spy_run_engines
+    
+    try:
+        s = pipeline.run_stages("C001")
+        assert call_counts["explanation"] == 3
+        assert call_counts["verify"] == 4
+        assert call_counts["run_engines"] == 1
+        assert s["verify"]["status"] == "pass"
+        expl = s["explanation"]
+        assert "Under the simulated return scenarios" in expl["plans_text"][0]["body"]
+    finally:
+        pipeline.run = original_run
+        pipeline.run_engines = original_run_engines

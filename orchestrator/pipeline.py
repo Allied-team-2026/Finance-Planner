@@ -252,8 +252,18 @@ def run_stages(customer_id, extra_monthly_savings=0):
     on a live demo.
     """
     s = run_engines(customer_id, extra_monthly_savings)
-    s["explanation"] = run("explanation", s["bundle"])
-    s["verify"] = run("verify", s["explanation"], s["bundle"])
+    
+    max_attempts = 3
+    for attempt in range(max_attempts):
+        s["explanation"] = run("explanation", s["bundle"])
+        s["verify"] = run("verify", s["explanation"], s["bundle"])
+        if s["verify"]["status"] == "pass":
+            break
+    else:
+        from agents.explanation import fallback_explain
+        s["explanation"] = fallback_explain(s["bundle"])
+        s["verify"] = run("verify", s["explanation"], s["bundle"])
+        
     return s
 
 
