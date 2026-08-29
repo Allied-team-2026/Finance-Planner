@@ -131,3 +131,51 @@ def test_live_api_c001_agent_chain():
         assert data["verifier"]["status"] == "pass"
     finally:
         pipeline.REAL_ENGINES.intersection_update(set())
+
+def test_production_api_uses_real_engines(monkeypatch):
+    """Prove that normal API calls use real engines by default and verify output.
+    
+    This test overrides the conftest.py mock to restore production wiring,
+    proves the real engine route is active by temporarily sabotaging it,
+    then executes a clean run to verify real computed values.
+    """
+    import api.main as api_main
+    from orchestrator import pipeline
+    
+    # 1. Restore production wiring that conftest.py cleared
+    monkeypatch.setattr(pipeline, "REAL_ENGINES", pipeline.PRODUCTION_ENGINES.copy())
+    
+    # 2. Sabotage the real profile engine to behaviorally prove we are using it
+    with monkeypatch.context() as m:
+        import engines.profile
+        
+        def broken_profile(*args):
+            raise RuntimeError("Sabotaged profile engine active")
+            
+        m.setattr(engines.profile, "build_profile", broken_profile)
+        
+        # FastAPI will catch the exception and return a 500 error
+        response = client.post("/api/plan", json={"customer_id": "C001"})
+        assert response.status_code == 500
+        assert "Internal server error" in response.json()["detail"]
+        
+    # 3. The context manager restores the real profile engine. Now do a clean run.
+    response = client.post("/api/plan", json={"customer_id": "C001"})
+    assert response.status_code == 200
+    data = response.json()
+    
+    # 4. Verify values correspond to the real engines, not the mocks
+    plan_a = next(p for p in data["plans"] if p["plan_id"] == "A")
+    plan_b = next(p for p in data["plans"] if p["plan_id"] == "B")
+    plan_c = next(p for p in data["plans"] if p["plan_id"] == "C")
+    
+    assert plan_a["success_probability"] == 0.7376
+    assert plan_b["success_probability"] == 0.5691
+    assert plan_c["success_probability"] == 0.9240
+    
+    assert plan_a["survives_stress"] is False
+    assert plan_b["survives_stress"] is False
+    assert plan_c["survives_stress"] is True
+    
+    assert data["risk"]["features_used"]["expense_volatility"] == 0.12
+

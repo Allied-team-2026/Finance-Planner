@@ -22,7 +22,16 @@ SCHEMA_VERSION = "api-v1"
 # Add a stage name here once its engine passes its own test. Anything not listed
 # runs on its mock. Keep this list honest - a stage listed here that returns
 # rubbish is worse than a mock, because the response still looks complete.
-REAL_ENGINES = set()
+PRODUCTION_ENGINES = {
+    "profile",
+    "features",
+    "risk",
+    "plans",
+    "montecarlo",
+    "stress",
+    "cohort",
+}
+REAL_ENGINES = PRODUCTION_ENGINES.copy()
 
 # stage name -> (mock file, "module:function" for the real engine)
 STAGES = {
