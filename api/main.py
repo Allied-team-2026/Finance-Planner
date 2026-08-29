@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from orchestrator.pipeline import engine_status, make_challenge, make_plan
+from orchestrator.pipeline import engine_status, make_challenge, make_plan, get_customer_profile
 
 app = FastAPI(title="Finance Planner", version="api-v1")
 
@@ -90,3 +90,11 @@ def status():
         "engines_live": sum(v == "engine" for v in stages.values()),
         "stages_total": len(stages),
     }
+
+@app.get("/api/customer/{customer_id}")
+def get_customer(customer_id: str):
+    """Lightweight endpoint for frontend to fetch profile without running expensive LLM pipelines."""
+    try:
+        return get_customer_profile(customer_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Customer not found")

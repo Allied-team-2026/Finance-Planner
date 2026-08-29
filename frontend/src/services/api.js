@@ -25,6 +25,20 @@ export async function fetchPlan(requestPayload) {
   }
 }
 
+export async function fetchCustomerProfile(customerId) {
+  try {
+    const res = await fetch(`/api/customer/${customerId}`)
+    if (!res.ok) {
+      if (res.status === 404) return null
+      throw new Error(`API Error: ${res.status}`)
+    }
+    return await res.json()
+  } catch (err) {
+    console.error('[API Service] Backend not reachable for customer fetch.', err)
+    throw err
+  }
+}
+
 export async function fetchChallenge(customerId, chosenPlanId) {
   try {
     const res = await fetch(`/api/challenge`, {

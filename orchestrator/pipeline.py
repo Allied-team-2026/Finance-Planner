@@ -24,6 +24,7 @@ SCHEMA_VERSION = "api-v1"
 # runs on its mock. Keep this list honest - a stage listed here that returns
 # rubbish is worse than a mock, because the response still looks complete.
 PRODUCTION_ENGINES = {
+    "customer",
     "profile",
     "features",
     "risk",
@@ -242,6 +243,37 @@ def run_engines(customer_id, extra_monthly_savings=0):
         "stress": stress, "cohort": cohort,
         "bundle": build_bundle(customer, profile, features, risk,
                                plans, montecarlo, stress, cohort),
+    }
+
+
+def get_customer_profile(customer_id):
+    """Lightweight retrieval of a customer's basic demographics and financial profile.
+    
+    This function runs only the absolute minimum required stages to derive net worth 
+    and expenses, completely bypassing LLMs, Monte Carlo, and Challenger logic.
+    It intentionally scrubs sensitive raw transactions and model parameters.
+    """
+    try:
+        customer = run("customer", customer_id)
+    except FileNotFoundError:
+        raise ValueError(f"Customer {customer_id} not found")
+
+    profile = run("profile", customer)
+    
+    return {
+        "customer_id": customer.get("customer_id", customer_id),
+        "customer_name": customer.get("customer_name") or customer.get("name"),
+        "age": customer.get("age"),
+        "dependents": customer.get("dependents", 0),
+        "employment_type": customer.get("employment_type"),
+        "city_tier": customer.get("city_tier"),
+        "monthly_income": profile.get("monthly_income"),
+        "monthly_expense": profile.get("monthly_expense"),
+        "monthly_surplus": profile.get("monthly_surplus"),
+        "net_worth": profile.get("net_worth"),
+        "emergency_fund_months": profile.get("emergency_fund_months"),
+        "stated_risk": customer.get("stated_risk"),
+        "goals": customer.get("goals", [])
     }
 
 
