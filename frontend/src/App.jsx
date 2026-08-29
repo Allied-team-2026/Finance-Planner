@@ -13,6 +13,7 @@ import WhatIfAnalysis from './components/WhatIfAnalysis'
 import ChallengePlan from './components/ChallengePlan'
 import SelectedPlanSummary from './components/SelectedPlanSummary'
 import SimulationDeepDive from './components/SimulationDeepDive'
+import VerificationBanner from './components/VerificationBanner'
 
 function App() {
   // Session State Model: mode ('guest' | 'new_user' | 'authenticated_demo'), customer (null | planData)
@@ -35,26 +36,34 @@ function App() {
 
   // Flow 2: New User completes Onboarding & Goal Builder
   const handleOnboardingComplete = async (payload) => {
-    const response = await fetchPlan(payload)
-    if (response) {
-      setSession({ mode: 'new_user', customer: response })
-      setSelectedPlanId('A')
-      setViewMode('dashboard')
+    try {
+      const response = await fetchPlan(payload)
+      if (response) {
+        setSession({ mode: 'new_user', customer: response })
+        setSelectedPlanId('A')
+        setViewMode('dashboard')
+      }
+    } catch (err) {
+      alert(err.message || 'Connection error: Unable to reach the backend.')
     }
   }
 
   // Flow 3: Existing User Sign-In
   const handleExistingUser = async (customerId, customerName) => {
-    const response = await fetchPlan({ customer_id: customerId })
-    if (response) {
-      const updated = {
-        ...response,
-        customer_id: customerId,
-        customer_name: customerName && customerName !== 'Existing Customer' ? customerName : response.customer_name,
+    try {
+      const response = await fetchPlan({ customer_id: customerId })
+      if (response) {
+        const updated = {
+          ...response,
+          customer_id: customerId,
+          customer_name: customerName && customerName !== 'Existing Customer' ? customerName : response.customer_name,
+        }
+        setSession({ mode: 'new_user', customer: updated })
+        setSelectedPlanId('A')
+        setViewMode('user-dashboard')
       }
-      setSession({ mode: 'new_user', customer: updated })
-      setSelectedPlanId('A')
-      setViewMode('user-dashboard')
+    } catch (err) {
+      alert(err.message || 'Connection error: Unable to reach the backend.')
     }
   }
 
@@ -147,6 +156,9 @@ function App() {
               </button>
             </div>
           )}
+
+          {/* Verification Banner */}
+          <VerificationBanner verifier={activeCustomer.verifier} />
 
           {/* Customer Context & Financial Health Snapshot */}
           <CustomerSnapshot

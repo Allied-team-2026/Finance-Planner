@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { fetchChallenge } from '../services/api'
 
 function formatINR(amount) {
   if (amount == null) return '₹0'
@@ -15,6 +16,7 @@ export default function ChallengePlan({
   const [query, setQuery] = useState('')
   const [challengeResult, setChallengeResult] = useState(initialChallenge)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   // Find currently selected plan object
   const selectedPlan = plans.find((p) => p.plan_id === selectedPlanId) || plans[0]
@@ -78,25 +80,13 @@ export default function ChallengePlan({
     setError(null)
 
     try {
-      const res = await fetch('/api/challenge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customer_id: customerId,
-          chosen_plan_id: selectedPlan.plan_id,
-        }),
-      })
-
-      if (res.ok) {
-        const data = await res.json()
+      const data = await fetchChallenge(customerId, selectedPlan.plan_id)
+      if (data) {
         setChallengeResult(data)
-      } else {
-        // Fallback to local development mock
-        setChallengeResult(getLocalMockChallenge(selectedPlan.plan_id))
       }
-    } catch {
-      // Offline fallback
-      setChallengeResult(getLocalMockChallenge(selectedPlan.plan_id))
+    } catch (err) {
+      setError(err.message || 'Unable to connect to backend to challenge plan.')
+      // No longer falling back to getLocalMockChallenge unless explicitly in demo mode
     } finally {
       setIsLoading(false)
     }
@@ -233,6 +223,11 @@ export default function ChallengePlan({
             </div>
 
             {/* Submit Action Button */}
+            {error && (
+              <div className="mt-2 text-xs text-rose-400 bg-rose-500/10 p-2 rounded-lg border border-rose-500/20">
+                {error}
+              </div>
+            )}
             <button
               type="submit"
               disabled={isLoading || !selectedPlan}

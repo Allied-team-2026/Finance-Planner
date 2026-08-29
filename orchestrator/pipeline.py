@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from importlib import import_module
 from pathlib import Path
 import json
+import groq
 
 MOCKS = Path(__file__).resolve().parent.parent / "mocks"
 SCHEMA_VERSION = "api-v1"
@@ -257,10 +258,14 @@ def run_stages(customer_id, extra_monthly_savings=0):
     previous_failures = None
     
     for attempt in range(max_attempts):
-        if previous_failures:
-            s["explanation"] = run("explanation", s["bundle"], previous_failures)
-        else:
-            s["explanation"] = run("explanation", s["bundle"])
+        try:
+            if previous_failures:
+                s["explanation"] = run("explanation", s["bundle"], previous_failures)
+            else:
+                s["explanation"] = run("explanation", s["bundle"])
+        except (groq.GroqError, ValueError) as e:
+            previous_failures = [f"API Generation Error: {str(e)}"]
+            continue
             
         s["verify"] = run("verify", s["explanation"], s["bundle"])
         
