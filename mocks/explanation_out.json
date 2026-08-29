@@ -51,6 +51,7 @@
   ],
   "goal_priority_note": "Your house downpayment is funded first because it is five years away, while the child education goal is twelve years out and can absorb a slower start. The nearer deadline is the binding one, so it sets the monthly figure.",
   "mismatch_note": "You described your approach as aggressive, but your transaction history looks moderate. On two occasions you sold equity within days of a market fall. That matters here because the plans with the highest projected returns are exactly the ones that fall furthest during a bad year, and a plan left early performs worse than a slower plan held to the end.",
+  "peer_cohort_note": "Among peers in a similar age bracket and income range, roughly half chose a moderate allocation. Your revealed risk profile aligns with that majority, though your stated preference leans more aggressive.",
   "numbers_used": [
     0.15,
     0.35,

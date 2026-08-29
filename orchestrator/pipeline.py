@@ -30,6 +30,8 @@ PRODUCTION_ENGINES = {
     "montecarlo",
     "stress",
     "cohort",
+    "explanation",
+    "verify",
 }
 REAL_ENGINES = PRODUCTION_ENGINES.copy()
 
