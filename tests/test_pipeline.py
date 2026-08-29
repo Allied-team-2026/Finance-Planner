@@ -482,6 +482,8 @@ def test_explanation_retry_success():
             call_counts["explanation"] += 1
             if call_counts["explanation"] == 1:
                 return {"status": "bad_explanation"}
+            assert len(args) == 2
+            assert len(args[1]) > 0
             return load_mock("explanation_out.json")
         if stage == "verify":
             call_counts["verify"] += 1
@@ -517,6 +519,9 @@ def test_explanation_fallback():
     def spy_run(stage, *args):
         if stage == "explanation":
             call_counts["explanation"] += 1
+            if call_counts["explanation"] > 1:
+                assert len(args) == 2
+                assert len(args[1]) > 0
             return {"status": "bad_explanation"}
         if stage == "verify":
             call_counts["verify"] += 1

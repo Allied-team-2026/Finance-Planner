@@ -408,7 +408,7 @@ def build_explanation_payload(bundle):
 
 from agents.numeric import extract_numbers_with_paths, validate_prose_numbers
 
-def explain(bundle):
+def explain(bundle, previous_failures=None):
     """Section 8. Turn plan_bundle into readable plan text.
     
     Called by the orchestrator as `agents.explanation:explain`.
@@ -463,6 +463,10 @@ Do not calculate percentages from decimals, simulation counts from probabilities
 Never identify the customer.
 In the "numbers_used" array, list ONLY the exact numbers you actually cited in your explanation text. Do not list every number from the payload. Do not put structural labels such as 10th percentile, 90th percentile, p10, or p90 into numbers_used.
 """
+
+    if previous_failures:
+        failure_msgs = "\n".join(f"- {f}" for f in previous_failures)
+        system_prompt += f"\n\nCRITICAL RETRY FEEDBACK:\nYour previous response failed verification due to the following issues:\n{failure_msgs}\n\nYou MUST correct these issues. Do NOT repeat the invalid claims. Use the authoritative bundle exactly and do not invent new values."
 
     model_name = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
     
@@ -589,22 +593,21 @@ def fallback_explain(bundle):
     for plan in bundle.get("plans", []):
         pid = plan["plan_id"]
         inv = plan["monthly_investment"]
-        eq_pct = round(plan["allocation"]["equity"] * 100, 2)
-        dt_pct = round(plan["allocation"]["debt"] * 100, 2)
+        eq = plan["allocation"]["equity"]
+        dt = plan["allocation"]["debt"]
+        succ = plan["success_probability"]
         corpus = plan["projected_corpus"]
-        succ_pct = round(plan["success_probability"] * 100, 2)
         
-        # Determine success probability presentation string without .0 if integer
-        succ_pct_str = f"{int(succ_pct)}" if succ_pct == int(succ_pct) else f"{succ_pct}"
-        eq_pct_str = f"{int(eq_pct)}" if eq_pct == int(eq_pct) else f"{eq_pct}"
-        dt_pct_str = f"{int(dt_pct)}" if dt_pct == int(dt_pct) else f"{dt_pct}"
+        eq_pct_str = _as_percent(eq)
+        dt_pct_str = _as_percent(dt)
+        succ_pct_str = _as_percent(succ)
         
         body = (f"This plan requires a monthly investment of {inv:,}. "
-                f"It allocates {eq_pct_str}% to equity and {dt_pct_str}% to debt. "
+                f"It allocates {eq_pct_str} to equity and {dt_pct_str} to debt. "
                 f"The projected corpus is {corpus:,}. "
-                f"Under the simulated return scenarios, this plan reaches the goal in {succ_pct_str}% of simulations.")
+                f"Under the simulated return scenarios, this plan reaches the goal in {succ_pct_str} of simulations.")
                 
-        numbers_used.update([inv, eq_pct, dt_pct, corpus, succ_pct])
+        numbers_used.update([inv, eq, dt, corpus, succ])
         
         pros = []
         cons = []

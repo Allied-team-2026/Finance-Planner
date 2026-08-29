@@ -254,11 +254,23 @@ def run_stages(customer_id, extra_monthly_savings=0):
     s = run_engines(customer_id, extra_monthly_savings)
     
     max_attempts = 3
+    previous_failures = None
+    
     for attempt in range(max_attempts):
-        s["explanation"] = run("explanation", s["bundle"])
+        if previous_failures:
+            s["explanation"] = run("explanation", s["bundle"], previous_failures)
+        else:
+            s["explanation"] = run("explanation", s["bundle"])
+            
         s["verify"] = run("verify", s["explanation"], s["bundle"])
+        
         if s["verify"]["status"] == "pass":
             break
+            
+        # Collect failures for next attempt
+        previous_failures = s["verify"].get("unverified_numbers", []) + s["verify"].get("suitability_flags", [])
+        if not previous_failures:
+            previous_failures = ["The previous response failed structural or numeric verification."]
     else:
         from agents.explanation import fallback_explain
         s["explanation"] = fallback_explain(s["bundle"])
