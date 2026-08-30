@@ -51,6 +51,12 @@ def challenge(bundle, explanation, verification, chosen_plan_id):
         raise ImportError("groq package is required. Run 'pip install groq'")
         
     payload = build_challenger_payload(bundle, explanation, verification)
+
+    # The screen turns alternative_suggested into a "switch to this plan" button by
+    # matching it against a real plan id. So the agent is only allowed to answer
+    # with a plan id or "none". Free prose here would silently lose the answer.
+    plan_ids = [p["plan_id"] for p in payload.get("plans", []) if p.get("plan_id")]
+    allowed_alternatives = plan_ids + ["none"]
     
     # 1. Provide Verifier Status Context
     verification_context = "The Explanation has PASSED verification."
@@ -74,6 +80,7 @@ INSTRUCTIONS:
 4. Clearly distinguish between fact (from the bundle) and interpretation (your challenge).
 5. Never identify the customer, account numbers, transactions, or individual peers. Do not reveal ground_truth_risk.
 6. Use ONLY numbers present in the payload. Do not invent arbitrary numbers.
+7. "alternative_suggested" must be exactly one plan id from {plan_ids}, or "none" if no other plan is better. No sentence, no explanation, no "Plan A" - just the letter.
 
 FORMAT:
 Output valid JSON matching the exact schema provided.
@@ -87,7 +94,7 @@ Output valid JSON matching the exact schema provided.
             "chosen_plan_id": {"type": "string"},
             "challenge": {"type": "string"},
             "evidence_cited": {"type": "array", "items": {"type": "string"}},
-            "alternative_suggested": {"type": "string"},
+            "alternative_suggested": {"type": "string", "enum": allowed_alternatives},
             "numbers_used": {"type": "array", "items": {"type": "number"}}
         },
         "required": ["chosen_plan_id", "challenge", "evidence_cited", "alternative_suggested", "numbers_used"],
@@ -127,6 +134,10 @@ Output valid JSON matching the exact schema provided.
         raise ValueError("Missing or invalid 'evidence_cited'")
     if "numbers_used" not in result or not isinstance(result["numbers_used"], list):
         raise ValueError("Missing or invalid 'numbers_used'")
+    if result["alternative_suggested"] not in allowed_alternatives:
+        raise ValueError(
+            f"alternative_suggested '{result['alternative_suggested']}' is not a plan id or 'none'"
+        )
         
     # 3. Privacy Validation
     result_str = json.dumps(result).lower()

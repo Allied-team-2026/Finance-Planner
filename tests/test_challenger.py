@@ -97,7 +97,7 @@ def base_groq_response():
         "chosen_plan_id": "C",
         "challenge": "Plan C invests 52000, which exceeds the 45000 surplus.",
         "evidence_cited": ["Surplus is 45000"],
-        "alternative_suggested": "Consider Plan A which invests 35000.",
+        "alternative_suggested": "A",
         "numbers_used": [52000, 45000, 35000]
     }
 
