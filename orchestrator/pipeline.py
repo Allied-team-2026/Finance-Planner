@@ -15,7 +15,10 @@ from datetime import datetime, timezone
 from importlib import import_module
 from pathlib import Path
 import json
+import math
 import groq
+
+from agents.numeric import extract_numbers_with_paths
 
 MOCKS = Path(__file__).resolve().parent.parent / "mocks"
 SCHEMA_VERSION = "api-v1"
@@ -33,6 +36,7 @@ PRODUCTION_ENGINES = {
     "stress",
     "cohort",
     "explanation",
+    "challenge",
     "verify",
 }
 REAL_ENGINES = PRODUCTION_ENGINES.copy()
@@ -96,6 +100,7 @@ def merge_plans(plans, montecarlo, stress, keep_return):
             "breaking_combo": st["breaking_combo"],
             "breaking_probability": st["breaking_probability"],
             "shortfall_if_hit": st["shortfall_if_hit"],
+            "combos_tested": st["combos_tested"],
         })
         merged.append(row)
     return merged
@@ -262,7 +267,7 @@ def get_customer_profile(customer_id):
     
     return {
         "customer_id": customer.get("customer_id", customer_id),
-        "customer_name": customer.get("customer_name") or customer.get("name"),
+        "customer_name": customer["name"],
         "age": customer.get("age"),
         "dependents": customer.get("dependents", 0),
         "employment_type": customer.get("employment_type"),
@@ -333,6 +338,37 @@ def make_challenge(customer_id, chosen_plan_id):
         raise ValueError(f"Invalid chosen_plan_id: {chosen_plan_id}")
         
     challenge = run("challenge", s["bundle"], s["explanation"], s["verify"], chosen_plan_id)
+
+    # A mock ignores its arguments, so a challenge stage running on its mock hands
+    # back the same canned plan every time - the caller asks about B and gets an
+    # argument against C. That has to be loud: the screen cannot tell a wrong-plan
+    # challenge from a right one, and a plausible argument about the wrong plan is
+    # worse than no argument at all.
+    returned = challenge.get("chosen_plan_id")
+    if returned != chosen_plan_id:
+        raise ValueError(
+            f"challenge stage answered about plan {returned} when asked about "
+            f"{chosen_plan_id}. The stage is running on its mock - check that "
+            f"'challenge' is in PRODUCTION_ENGINES and restart the server."
+        )
+
+    # The plan-id check above misses the worse case. Asked about plan C, the mock
+    # returns plan C, the ids agree, and C001's 52,000 lands on C003's screen with
+    # nothing to show it is the wrong customer's money. So the numbers have to
+    # belong to this customer's bundle. The challenge agent checks this on its own
+    # output, but that check does not run when the stage is a mock - and a mock is
+    # exactly when the numbers come from someone else.
+    allowed = extract_numbers_with_paths(s["bundle"])
+    for num in challenge.get("numbers_used", []):
+        if not any(math.isclose(float(num), a, rel_tol=1e-5, abs_tol=1e-5)
+                   for a in allowed):
+            raise ValueError(
+                f"challenge cites {num}, which is not in this customer's numbers. "
+                f"The stage is running on its mock, so it is quoting another "
+                f"customer - check that 'challenge' is in PRODUCTION_ENGINES and "
+                f"restart the server."
+            )
+
     return build_response(s["customer"], s["profile"], s["risk"], s["plans"],
                           s["montecarlo"], s["stress"], s["explanation"],
                           s["cohort"], s["verify"], challenge=challenge)

@@ -412,7 +412,10 @@ def test_make_challenge_integration():
         def spy_run(stage, *args):
             if stage == "challenge":
                 captured_args.extend(args)
-                return load_mock("challenge_out.json")
+                # The stage is asked about B, so it answers about B. The mock file
+                # is always about C; leaving it that way would make this test
+                # assert that a wrong-plan challenge is acceptable.
+                return {**load_mock("challenge_out.json"), "chosen_plan_id": "B"}
             return original_run(stage, *args)
             
         pipeline.run = spy_run
@@ -433,6 +436,40 @@ def test_make_challenge_integration():
     finally:
         if was_real:
             pipeline.REAL_ENGINES.add("challenge")
+
+def test_make_challenge_rejects_wrong_plan():
+    """A challenge about the wrong plan must fail loudly, not reach the screen.
+
+    This is the mock-serving case: run() on a mock ignores its arguments and hands
+    back the canned plan C challenge whatever was asked for.
+    """
+    was_real = "challenge" in pipeline.REAL_ENGINES
+    pipeline.REAL_ENGINES.discard("challenge")
+    try:
+        with pytest.raises(ValueError, match="running on its mock"):
+            make_challenge("C001", "B")
+    finally:
+        if was_real:
+            pipeline.REAL_ENGINES.add("challenge")
+
+
+def test_make_challenge_rejects_another_customers_numbers():
+    """The plan id can match and the answer still be about the wrong person.
+
+    Asked about plan C, the mock returns plan C, so the id check is satisfied. But
+    the mock is C001's fixture, so for C003 it argues from C001's 52,000 against
+    C001's 45,000 surplus. Nothing on the screen shows whose money that is, which
+    makes it the worst kind of wrong answer.
+    """
+    was_real = "challenge" in pipeline.REAL_ENGINES
+    pipeline.REAL_ENGINES.discard("challenge")
+    try:
+        with pytest.raises(ValueError, match="not in this customer's numbers"):
+            make_challenge("C003", "C")
+    finally:
+        if was_real:
+            pipeline.REAL_ENGINES.add("challenge")
+
 
 @pytest.mark.skipif(not os.environ.get("GROQ_API_KEY"), reason="live")
 def test_live_c001_agent_chain():
