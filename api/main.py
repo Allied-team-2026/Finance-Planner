@@ -13,7 +13,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from orchestrator.pipeline import engine_status, make_challenge, make_plan, get_customer_profile
+# The agents read GROQ_API_KEY from the environment. Nothing was putting .env
+# into the environment, so unless you exported the key by hand the explanation
+# agent burned three retries and fell back to the template, and /api/challenge
+# answered 400.
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from orchestrator.pipeline import engine_status, make_challenge, make_plan, get_customer_profile  # noqa: E402
 
 app = FastAPI(title="Finance Planner", version="api-v1")
 
@@ -70,9 +78,10 @@ def challenge(request: ChallengeRequest):
 def whatif(request: WhatIfRequest):
     """Same as /api/plan with a bigger monthly surplus.
 
-    Wired end to end, but do not demo it until the plan generator is real: right
-    now the surplus in the response goes up and the plan numbers do not move,
-    because the mock returns fixed plans whatever you feed it.
+    Safe to demo. The plan generator is a real engine now, so the extra surplus
+    moves the investment amounts, the projected corpus and the success
+    probability. A plan can still stay infeasible if it asks for more than even
+    the raised surplus.
     """
     return make_plan(request.customer_id, request.extra_monthly_savings)
 
