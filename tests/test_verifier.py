@@ -1,6 +1,6 @@
 import json
 import pytest
-from agents.verifier import verify
+from agents.verifier import verify, verify_challenge
 
 @pytest.fixture
 def valid_bundle():
@@ -165,3 +165,54 @@ def test_forbidden_categorical_claim_fails(valid_explanation, valid_bundle):
     result = verify(valid_explanation, valid_bundle)
     assert result["status"] == "fail"
     assert any("Forbidden claim" in f for f in result["suitability_flags"])
+
+
+@pytest.fixture
+def valid_challenge():
+    return {
+        "chosen_plan_id": "C",
+        "challenge": "Plan C asks for 52000 a month, more than the 35000 Plan A asks for.",
+        "evidence_cited": [],
+        "alternative_suggested": "A",
+        "numbers_used": [52000, 35000],
+    }
+
+
+def test_challenge_using_bundle_numbers_passes(valid_challenge, valid_bundle):
+    """Non-vacuity guard for the three failure tests below."""
+    result = verify_challenge(valid_challenge, valid_bundle)
+    assert result["status"] == "pass"
+    assert result["numbers_checked"] > 0
+
+
+def test_challenge_may_cite_another_plan(valid_challenge, valid_bundle):
+    """Comparing plans is the challenger's job, not contamination.
+
+    The plans_text sweep restricts each plan's prose to its own numbers. This one
+    must not, or every useful "Plan A only asks for 35,000" is a failure.
+    """
+    assert verify_challenge(valid_challenge, valid_bundle)["status"] == "pass"
+
+
+def test_challenge_with_another_customers_number_fails(valid_challenge, valid_bundle):
+    """The screenshot case: C001's fixture served for another customer."""
+    valid_challenge["numbers_used"].append(99999)
+    result = verify_challenge(valid_challenge, valid_bundle)
+    assert result["status"] == "fail"
+    assert any("99999" in str(u) for u in result["unverified_numbers"])
+
+
+def test_challenge_with_invented_prose_number_fails(valid_challenge, valid_bundle):
+    """A number in the prose counts even when numbers_used does not declare it."""
+    valid_challenge["challenge"] += " That leaves you 8123 short."
+    result = verify_challenge(valid_challenge, valid_bundle)
+    assert result["status"] == "fail"
+    assert any("8123" in str(u) for u in result["unverified_numbers"])
+
+
+def test_challenge_with_a_guarantee_fails(valid_challenge, valid_bundle):
+    valid_challenge["challenge"] += " This plan is guaranteed to reach your goal."
+    result = verify_challenge(valid_challenge, valid_bundle)
+    assert result["status"] == "fail"
+    assert any("Forbidden claim" in f for f in result["suitability_flags"])
+

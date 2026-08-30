@@ -369,6 +369,23 @@ def make_challenge(customer_id, chosen_plan_id):
                 f"restart the server."
             )
 
+    # The screen shows one Auditor badge, driven by `verifier.status`. Until now
+    # that badge reported on the explanation only, so it read "Pass" beside a
+    # challenge nobody had checked. Folding the challenge result into the same
+    # four fields keeps the badge's meaning - everything on this page was checked
+    # - without the UI having to learn about a second verdict.
+    #
+    # Called directly rather than through run(): a stage exists so a mock can
+    # stand in for an engine that is not written yet, and this engine is written.
+    from agents.verifier import verify_challenge
+    cv = verify_challenge(challenge, s["bundle"])
+    combined = {
+        "status": "fail" if "fail" in (s["verify"]["status"], cv["status"]) else "pass",
+        "numbers_checked": s["verify"]["numbers_checked"] + cv["numbers_checked"],
+        "unverified_numbers": s["verify"]["unverified_numbers"] + cv["unverified_numbers"],
+        "suitability_flags": s["verify"]["suitability_flags"] + cv["suitability_flags"],
+    }
+
     return build_response(s["customer"], s["profile"], s["risk"], s["plans"],
                           s["montecarlo"], s["stress"], s["explanation"],
-                          s["cohort"], s["verify"], challenge=challenge)
+                          s["cohort"], combined, challenge=challenge)
