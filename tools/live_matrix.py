@@ -18,10 +18,20 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 
-from agents.numeric import extract_numbers_with_paths
-from orchestrator.pipeline import make_challenge, make_plan, run_engines
+# The key lives in .env, which is gitignored so each person uses their own. Only
+# api/main.py used to load it, so running this straight from the shell found no
+# key and quit. The path is given explicitly rather than searched for, so it works
+# from any directory - this script sits in tools/ and .env sits one level up.
+from dotenv import load_dotenv  # noqa: E402
+
+load_dotenv(ROOT / ".env")
+
+from agents.numeric import extract_numbers_with_paths  # noqa: E402
+from orchestrator.pipeline import (make_challenge, make_plan,  # noqa: E402
+                                   run_engines)
 
 CUSTOMERS = ["C001", "C002", "C003"]
 PLANS = ["A", "B", "C"]
