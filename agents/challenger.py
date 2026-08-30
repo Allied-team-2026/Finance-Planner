@@ -1,4 +1,12 @@
 import json
+import re
+
+# A peer in the cohort data is named P1, P2, P42. A percentile label is p10, p25,
+# p50, p75 or p90 - those name numbers the bundle hands over on purpose, so they
+# are not identities and must be allowed through. Kept as one constant so the test
+# checks the pattern production uses rather than its own copy of it.
+PEER_ID_PATTERN = r'\bp(?!(?:10|25|50|75|90)\b)\d+\b'
+
 
 def build_challenger_payload(bundle, explanation, verification):
     """
@@ -142,9 +150,14 @@ Output valid JSON matching the exact schema provided.
     # 3. Privacy Validation
     result_str = json.dumps(result).lower()
     forbidden_terms = ["jane", "c001", "g00", "ground_truth_risk", "rahul", "mehta", "account", "transaction", "investment_event"]
-    # Check for individual peers like p1, p2
-    import re
-    if re.search(r'\bp\d+\b', result_str):
+    # Individual peers are named P1, P2 and must never be quoted. But p10, p50 and
+    # p90 are percentile labels for numbers the bundle hands over on purpose -
+    # p10_corpus, p90_corpus, p10_gap_to_goal - and the plan with the worst
+    # downside is exactly the one worth challenging. A plain \bp\d+\b regex read
+    # "the p10 outcome" as a peer ID and refused the whole challenge, which is why
+    # challenging plan A returned nothing at all. The verifier already treats these
+    # five as labels; this now agrees with it.
+    if re.search(PEER_ID_PATTERN, result_str):
         raise ValueError("Privacy violation: individual peer ID found")
         
     for term in forbidden_terms:
