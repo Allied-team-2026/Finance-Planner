@@ -243,3 +243,60 @@ def test_fallback_challenge_answers_about_the_right_plan(plan_id):
     assert result["chosen_plan_id"] == plan_id
     assert result["alternative_suggested"] != plan_id
 
+
+@patch("groq.Groq")
+@patch.dict(os.environ, {"GROQ_API_KEY": "fake_key"})
+def test_number_only_in_the_explanation_is_refused(mock_groq, base_bundle,
+                                                   base_explanation,
+                                                   base_verification,
+                                                   base_groq_response):
+    """The explanation is not authoritative, so it cannot license a number.
+
+    The payload carries the explanation so the challenger can question it. Reading
+    the whitelist off the whole payload meant the explanation's own prose - "a
+    40/60 split" - made 40 a legal number here while verify_challenge, which
+    checks the bundle alone, still refused it. That put a Fail badge beside a
+    challenge that had already been shown on screen.
+    """
+    base_bundle["plans"].append({"plan_id": "C", "monthly_investment": 52000})
+    base_explanation["plans_text"][0]["body"] = "a 40/60 equity-debt split"
+    base_groq_response["challenge"] += " The split is 40 equity."
+    mock_groq.return_value = mock_groq_client(base_groq_response)
+    from agents.challenger import challenge
+    with pytest.raises(ValueError, match="not found in payload"):
+        challenge(base_bundle, base_explanation, base_verification, "C")
+
+
+@patch("groq.Groq")
+@patch.dict(os.environ, {"GROQ_API_KEY": "fake_key"})
+def test_same_number_from_an_engine_is_allowed(mock_groq, base_bundle,
+                                               base_explanation,
+                                               base_verification,
+                                               base_groq_response):
+    """Non-vacuity guard: the refusal above is about where 40 came from, not 40."""
+    base_bundle["plans"].append({"plan_id": "C", "monthly_investment": 52000,
+                                 "equity_pct": 40})
+    base_groq_response["challenge"] += " The split is 40 equity."
+    base_groq_response["numbers_used"].append(40)
+    mock_groq.return_value = mock_groq_client(base_groq_response)
+    from agents.challenger import challenge
+    result = challenge(base_bundle, base_explanation, base_verification, "C")
+    assert "40" in result["challenge"]
+
+
+@patch("groq.Groq")
+@patch.dict(os.environ, {"GROQ_API_KEY": "fake_key"})
+def test_verifier_rejected_number_is_not_a_licence(mock_groq, base_bundle,
+                                                   base_explanation,
+                                                   base_verification,
+                                                   base_groq_response):
+    """The worst case of the same bug: verification.unverified_numbers lists the
+    numbers the verifier just refused, and those were being read as a whitelist."""
+    base_bundle["plans"].append({"plan_id": "C", "monthly_investment": 52000})
+    base_verification["unverified_numbers"] = [777777]
+    base_groq_response["challenge"] += " It reaches 777777."
+    mock_groq.return_value = mock_groq_client(base_groq_response)
+    from agents.challenger import challenge
+    with pytest.raises(ValueError, match="not found in payload"):
+        challenge(base_bundle, base_explanation, base_verification, "C")
+
