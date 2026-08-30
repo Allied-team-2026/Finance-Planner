@@ -21,6 +21,13 @@ from orchestrator import pipeline  # noqa: E402
 from orchestrator.pipeline import (build_response, load_mock,  # noqa: E402
                                    make_plan, run_stages)
 
+# The stages that decide how much money the customer actually has. A test about
+# one customer's numbers not belonging to another has to turn these on, because
+# `tests/conftest.py` mocks every stage by default and the customer mock is
+# always C001's - so with everything mocked, every customer looks like C001.
+CUSTOMER_SPECIFIC_ENGINES = {"customer", "profile", "features",
+                             "plans", "montecarlo", "stress"}
+
 
 def stages():
     """Every stage's output, wired the way production wires it.
@@ -453,22 +460,34 @@ def test_make_challenge_rejects_wrong_plan():
             pipeline.REAL_ENGINES.add("challenge")
 
 
-def test_make_challenge_rejects_another_customers_numbers():
+def test_make_challenge_rejects_another_customers_numbers(monkeypatch):
     """The plan id can match and the answer still be about the wrong person.
 
     Asked about plan C, the mock returns plan C, so the id check is satisfied. But
     the mock is C001's fixture, so for C003 it argues from C001's 52,000 against
     C001's 45,000 surplus. Nothing on the screen shows whose money that is, which
     makes it the worst kind of wrong answer.
+
+    The engines that decide how much money this customer has must be real here, or
+    the bundle is C001's too and 52,000 is legitimately in it - which is why the
+    first version of this test passed for the wrong reason. `risk` stays mocked
+    because it needs a trained model file and cannot move a rupee; `explanation`
+    and `verify` stay mocked because the guard reads the challenge only.
     """
-    was_real = "challenge" in pipeline.REAL_ENGINES
-    pipeline.REAL_ENGINES.discard("challenge")
-    try:
-        with pytest.raises(ValueError, match="not in this customer's numbers"):
-            make_challenge("C003", "C")
-    finally:
-        if was_real:
-            pipeline.REAL_ENGINES.add("challenge")
+    monkeypatch.setattr(pipeline, "REAL_ENGINES", set(CUSTOMER_SPECIFIC_ENGINES))
+    with pytest.raises(ValueError, match="not in this customer's numbers"):
+        make_challenge("C003", "C")
+
+
+def test_make_challenge_accepts_the_numbers_it_should(monkeypatch):
+    """Non-vacuity guard for the test above.
+
+    The mock is C001's, so for C001 every number it cites really is this
+    customer's and the guard must stay quiet. Without this, a guard that refused
+    everything would pass the test above and break every real challenge.
+    """
+    monkeypatch.setattr(pipeline, "REAL_ENGINES", set(CUSTOMER_SPECIFIC_ENGINES))
+    make_challenge("C001", "C")
 
 
 @pytest.mark.skipif(not os.environ.get("GROQ_API_KEY"), reason="live")
