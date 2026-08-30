@@ -1379,6 +1379,5 @@
       "days_after_drop": null
     }
   ],
-  "ground_truth_risk": "conservative",
-  "customer_name": "Aisha Sharma"
+  "ground_truth_risk": "conservative"
 }

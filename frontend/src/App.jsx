@@ -49,16 +49,13 @@ function App() {
   }
 
   // Flow 3: Existing User Sign-In
-  const handleExistingUser = async (customerId, customerName) => {
+  const handleExistingUser = async (customerId) => {
     try {
       const response = await fetchPlan({ customer_id: customerId })
       if (response) {
-        const updated = {
-          ...response,
-          customer_id: customerId,
-          customer_name: customerName && customerName !== 'Existing Customer' ? customerName : response.customer_name,
-        }
-        setSession({ mode: 'new_user', customer: updated })
+        // The backend owns the name. We do not overwrite it with whatever was
+        // typed on the sign-in screen, or the two screens disagree.
+        setSession({ mode: 'new_user', customer: response })
         setSelectedPlanId('A')
         setViewMode('user-dashboard')
       }
@@ -129,6 +126,7 @@ function App() {
             plans={activeCustomer.plans}
             selectedPlanId={selectedPlanId}
             generatedAt={activeCustomer.generated_at}
+            nSimulations={activeCustomer.meta?.n_simulations}
             onViewLatestAnalysis={() => setViewMode('dashboard')}
             onStartNewAnalysis={handleStartNewUser}
           />
@@ -144,7 +142,9 @@ function App() {
               <div className="flex items-center gap-2.5">
                 <span className="flex h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
                 <span>
-                  <strong>Demo Evaluation Mode (Persona C001 &middot; Rahul Mehta):</strong> Displaying pre-computed mock analysis dataset for hackathon evaluation.
+                  <strong>
+                    Demo Evaluation Mode ({activeCustomer.customer_id} &middot; {activeCustomer.customer_name}):
+                  </strong> Displaying pre-computed mock analysis dataset for hackathon evaluation.
                 </span>
               </div>
               <button
@@ -188,8 +188,8 @@ function App() {
           {/* 3-Plan Strategic Comparison Section */}
           <PlanComparison
             plans={activeCustomer.plans}
-            monthlySurplus={activeCustomer.profile?.monthly_surplus}
             goalPriorityNote={activeCustomer.goal_priority_note}
+            nSimulations={activeCustomer.meta?.n_simulations}
             selectedPlanId={selectedPlanId}
             onSelectPlan={setSelectedPlanId}
           />
@@ -215,7 +215,6 @@ function App() {
           <SelectedPlanSummary
             plans={activeCustomer.plans}
             selectedPlanId={selectedPlanId}
-            monthlySurplus={activeCustomer.profile?.monthly_surplus}
             goals={activeCustomer.goals}
             onStartNewAnalysis={handleStartNewUser}
           />
@@ -224,23 +223,29 @@ function App() {
           <SimulationDeepDive
             plans={activeCustomer.plans}
             goalAmount={activeCustomer.goals?.[0]?.target_amount}
+            nSimulations={activeCustomer.meta?.n_simulations}
           />
 
           {/* Audit & Compliance Footer */}
           <footer className="mt-4 pt-6 border-t border-slate-850 text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span className={`h-2 w-2 rounded-full ${
+                activeCustomer.verifier?.status === 'fail' ? 'bg-rose-500' : 'bg-emerald-500'
+              }`} />
               <span>
-                Audited by Cognizant Verification Engine (
-                {activeCustomer.verifier?.numbers_checked || 87} deterministic checks passed)
+                {activeCustomer.verifier == null
+                  ? 'Verification not reported'
+                  : `Cognizant Verification Engine: ${activeCustomer.verifier.numbers_checked} numbers checked, ${
+                      activeCustomer.verifier.status === 'fail' ? 'verification failed' : 'all matched'
+                    }`}
               </span>
             </div>
             <div className="flex items-center gap-3 text-[11px] text-slate-400">
-              <span>Model: {activeCustomer.meta?.model_version || 'rr-v1'}</span>
+              <span>Model: {activeCustomer.meta?.model_version ?? '—'}</span>
               <span>&middot;</span>
-              <span>Assumptions: {activeCustomer.meta?.assumptions_version || 'assump-v1'}</span>
+              <span>Assumptions: {activeCustomer.meta?.assumptions_version ?? '—'}</span>
               <span>&middot;</span>
-              <span>Market Data: NIFTY 2005–2025</span>
+              <span>Returns: {activeCustomer.meta?.returns_data_source ?? '—'}</span>
             </div>
           </footer>
         </main>

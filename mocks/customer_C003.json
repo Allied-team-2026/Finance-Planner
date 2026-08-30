@@ -1311,6 +1311,5 @@
       "days_after_drop": null
     }
   ],
-  "ground_truth_risk": "moderate",
-  "customer_name": "Vikram Singh"
+  "ground_truth_risk": "moderate"
 }
