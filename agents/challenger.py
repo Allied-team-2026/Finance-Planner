@@ -48,7 +48,7 @@ import json
 
 from agents.numeric import extract_numbers_with_paths, validate_prose_numbers
 
-def challenge(bundle, explanation, verification, chosen_plan_id):
+def challenge(bundle, explanation, verification, chosen_plan_id, previous_failures=None):
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
         raise ValueError("GROQ_API_KEY environment variable is not set")
@@ -94,6 +94,17 @@ INSTRUCTIONS:
 FORMAT:
 Output valid JSON matching the exact schema provided.
 """
+
+    # A refused attempt is worth more to the model than a second identical try.
+    # The checks below reject on exactly one reason at a time, so handing that
+    # reason back is enough to steer it - this is how the explanation agent
+    # already recovers, and the challenge had no equivalent.
+    if previous_failures:
+        system_prompt += (
+            "\nYOUR PREVIOUS ATTEMPT WAS REJECTED FOR THIS REASON:\n"
+            + "\n".join(f"- {f}" for f in previous_failures)
+            + "\nFix exactly that and keep everything else the same.\n"
+        )
 
     model_name = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
     
@@ -189,3 +200,81 @@ Output valid JSON matching the exact schema provided.
         validate_prose_numbers(ev, numbers_map)
         
     return result
+
+
+def fallback_challenge(bundle, chosen_plan_id):
+    """A challenge built from templates when the model's own tries were refused.
+
+    Mirrors fallback_explain: the same three checks apply to it, so it has to be
+    made of bundle numbers only and do no arithmetic. Before this existed, one
+    refused generation meant the challenge panel stayed empty and the customer
+    saw no argument at all - which looks exactly like a broken button.
+
+    Numbers are written as plain digits with no comma grouping. Indian grouping
+    reads better, but "12,34,567" is not one number to the prose checker, and a
+    fallback that fails the check it exists to satisfy is worse than a plain one.
+    """
+    plans = {p["plan_id"]: p for p in bundle.get("plans", [])}
+    plan = plans.get(chosen_plan_id)
+    if plan is None:
+        raise ValueError(f"plan {chosen_plan_id} is not in the bundle")
+
+    surplus = bundle["profile"]["monthly_surplus"]
+    numbers = [plan["monthly_investment"], surplus]
+    points = []
+
+    # Each point is a field read straight out of the bundle. Nothing is compared,
+    # added or converted - the engines already decided all of it.
+    if not plan.get("feasible"):
+        points.append(
+            f"It asks for {plan['monthly_investment']} a month, and your monthly "
+            f"surplus is {surplus}. On today's income you cannot fund it without "
+            f"cutting something else.")
+    else:
+        points.append(
+            f"It asks for {plan['monthly_investment']} a month out of a surplus "
+            f"of {surplus}, so most of your spare money is committed for years.")
+
+    if plan.get("survives_stress") is False and plan.get("shortfall_if_hit") is not None:
+        points.append(
+            f"It does not survive our stress test. If those shock events land "
+            f"together you finish {plan['shortfall_if_hit']} short of the goal.")
+        numbers.append(plan["shortfall_if_hit"])
+
+    # Simulation counts rather than the probability: both are bundle numbers, but
+    # "0 of 10000 simulations" needs no conversion, where the probability would
+    # have to be read out as "0.0" or multiplied by 100 to become a percentage.
+    if (plan.get("successful_simulations") is not None
+            and bundle.get("n_simulations") is not None):
+        points.append(
+            f"Out of {bundle['n_simulations']} simulations on historical market "
+            f"returns, {plan['successful_simulations']} reached your goal. That is "
+            f"a simulation result, not a promise.")
+        numbers.extend([bundle["n_simulations"], plan["successful_simulations"]])
+
+    if plan.get("exceeds_risk_ceiling"):
+        points.append(
+            "It also sits above the risk level your own financial position "
+            "supports, so a bad year would hurt more than you may expect.")
+
+    # The alternative is read from the comparison the orchestrator precomputed,
+    # never chosen by comparing numbers here.
+    comparisons = bundle.get("comparisons", {})
+    alternative = comparisons.get("cheapest_plan_id")
+    if alternative == chosen_plan_id:
+        alternative = comparisons.get("highest_success_plan_id")
+    if alternative == chosen_plan_id or alternative not in plans:
+        alternative = "none"
+
+    return {
+        "chosen_plan_id": chosen_plan_id,
+        "challenge": " ".join(points),
+        "evidence_cited": [
+            f"plans[{chosen_plan_id}].monthly_investment",
+            "profile.monthly_surplus",
+            f"plans[{chosen_plan_id}].successful_simulations",
+        ],
+        "alternative_suggested": alternative,
+        "numbers_used": numbers,
+        "source": "fallback",
+    }
