@@ -2,18 +2,17 @@ import { useState } from 'react'
 import { fetchChallenge } from '../services/api'
 
 function formatINR(amount) {
-  if (amount == null) return '₹0'
-  return `₹${Math.round(amount).toLocaleString('en-IN')}`
+  if (amount == null || isNaN(amount)) return '—'
+  return `₹${Math.round(Number(amount)).toLocaleString('en-IN')}`
 }
 
 export default function ChallengePlan({
   plans = [],
   selectedPlanId,
   onSelectPlan,
-  customerId = 'C001',
+  customerId,
   initialChallenge = null,
 }) {
-  const [query, setQuery] = useState('')
   const [challengeResult, setChallengeResult] = useState(initialChallenge)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -21,80 +20,42 @@ export default function ChallengePlan({
   // Find currently selected plan object
   const selectedPlan = plans.find((p) => p.plan_id === selectedPlanId) || plans[0]
 
-  // Suggested challenge prompt chips
-  const suggestedPrompts = [
-    'What could make this plan fail?',
-    'What if my expenses increase?',
-    'What if the market falls?',
-    'What if my income drops?',
-    'Why is this plan suitable for me?',
-  ]
+  // A challenge belongs to the plan it was run against. If the pick changes
+  // afterwards - including by clicking "Switch to Plan X" in this very panel -
+  // the old challenge is not about the new plan, so it is not shown. Deriving
+  // this from the result itself means there is no second copy of the selection
+  // to keep in sync.
+  const staleChallenge =
+    challengeResult != null &&
+    selectedPlan != null &&
+    challengeResult.chosen_plan_id !== selectedPlan.plan_id
+  const activeChallenge = staleChallenge ? null : challengeResult
 
-  // Offline / development mock response helper
-  const getLocalMockChallenge = (planId) => {
-    if (planId === 'C') {
-      return {
-        chosen_plan_id: 'C',
-        challenge:
-          'You have picked the Growth plan, and two things about it are worth sitting with before you commit. First, it is not affordable as it stands: it asks for 52,000 a month against a monthly surplus of 45,000, which leaves you 7,000 short every month, so something else in your budget would have to give. Second, and this is the part your own history speaks to, it puts 85% into equity. Your transaction history shows you exited equity mutual funds within 3 days of a 9% market drop in March 2024, and sold again during a 6% drop in October 2024. A plan is only as good as your willingness to stay in it during a bad year, and the plans with the highest projected returns are exactly the ones that fall furthest when a bad year arrives. The Steady plan asks for 35,000, stays within what your finances can absorb, and was the only one of the three still standing after our stress test.',
-        evidence_cited: [
-          'Exited equity mutual funds within 3 days of a 9% market drop in March 2024',
-          'Sold again during a 6% drop in October 2024, this time 90000 rupees of holdings',
-        ],
-        alternative_suggested: 'A',
-        numbers_used: [52000, 45000, 7000, 0.85, 35000, 3],
-      }
-    } else if (planId === 'B') {
-      return {
-        chosen_plan_id: 'B',
-        challenge:
-          'You have picked the Balanced plan (Plan B). While it fits your 45,000 monthly surplus with a 30,000 commitment, it fails under combined adverse shocks (such as an appraisal miss combined with family medical expense, creating a 4,20,000 shortfall). Furthermore, its 65% equity allocation carries downside risk that may test your tolerance during market downturns.',
-        evidence_cited: [
-          'Exited equity mutual funds within 3 days of a 9% market drop in March 2024',
-          'Fails under dual stress shocks with ₹4,20,000 projected shortfall',
-        ],
-        alternative_suggested: 'A',
-        numbers_used: [30000, 45000, 420000, 0.65],
-      }
-    } else {
-      return {
-        chosen_plan_id: 'A',
-        challenge:
-          'You have picked the Steady plan (Plan A). This plan commits 35,000 a month against your 45,000 surplus, leaving a healthy 10,000 monthly cushion. It survived all 165 tested shock scenarios. The primary trade-off is a more conservative 9% expected annual return (40% equity / 60% debt), which requires disciplined monthly contributions to achieve the 25,00,000 target over 5 years.',
-        evidence_cited: [
-          'Surplus ratio easily covers ₹35,000 monthly commitment with ₹10,000 buffer',
-          'Passed all 165 shock combinations with 0 projected shortfall',
-        ],
-        alternative_suggested: null,
-        numbers_used: [35000, 45000, 10000, 2500000, 165],
-      }
-    }
-  }
-
-  // Handle Challenge Submission
+  // Ask the backend to challenge the selected plan. There is no local fallback
+  // response: a canned challenge would read exactly like a real one, and the
+  // whole point of this screen is that every claim is traceable to the engines.
   const handleChallengeSubmit = async (e) => {
     if (e) e.preventDefault()
-    if (!selectedPlan) return
+    if (!selectedPlan || !customerId) return
 
     setIsLoading(true)
     setError(null)
 
     try {
       const data = await fetchChallenge(customerId, selectedPlan.plan_id)
-      if (data) {
-        setChallengeResult(data)
-      }
+      setChallengeResult(data)
     } catch (err) {
-      setError(err.message || 'Unable to connect to backend to challenge plan.')
-      // No longer falling back to getLocalMockChallenge unless explicitly in demo mode
+      setChallengeResult(null)
+      setError(err.message || 'Unable to reach the backend to challenge this plan.')
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Find alternative plan object if suggested
-  const alternativePlan = challengeResult?.alternative_suggested
-    ? plans.find((p) => p.plan_id === challengeResult.alternative_suggested)
+  // Find alternative plan object if suggested. The agent returns a plan letter,
+  // so anything that does not match a real plan is ignored rather than shown.
+  const alternativePlan = activeChallenge?.alternative_suggested
+    ? plans.find((p) => p.plan_id === activeChallenge.alternative_suggested)
     : null
 
   return (
@@ -117,9 +78,9 @@ export default function ChallengePlan({
         </p>
       </div>
 
-      {/* Grid: Left = Selected Plan Summary & Prompt Input | Right = Challenger Analysis Result */}
+      {/* Grid: Left = Selected Plan Summary & Run Control | Right = Challenger Analysis Result */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Selected Plan & Interactive Input (5 cols) */}
+        {/* Left Column: Selected Plan & Run Control (5 cols) */}
         <div className="lg:col-span-5 flex flex-col gap-5">
           {/* Selected Plan Summary Card */}
           {selectedPlan ? (
@@ -154,7 +115,9 @@ export default function ChallengePlan({
                 <div className="rounded-xl bg-[#090e1a] p-2.5 border border-slate-800">
                   <p className="text-[10px] text-slate-400">Success probability</p>
                   <p className="mt-0.5 text-sm font-bold text-white">
-                    {Math.round(selectedPlan.success_probability * 100)}%
+                    {selectedPlan.success_probability == null
+                      ? '—'
+                      : `${Math.round(selectedPlan.success_probability * 100)}%`}
                   </p>
                 </div>
               </div>
@@ -174,9 +137,9 @@ export default function ChallengePlan({
                   </span>
                 </div>
                 {selectedPlan.exceeds_risk_ceiling && (
-                  <div className="flex items-center justify-between rounded-lg bg-rose-950/30 px-2.5 py-1.5 border border-rose-800/40 text-rose-300">
+                  <div className="flex items-center justify-between rounded-lg bg-amber-950/30 px-2.5 py-1.5 border border-amber-800/40 text-amber-300">
                     <span>Risk Ceiling:</span>
-                    <span className="font-semibold">⚠ Exceeds Tolerance</span>
+                    <span className="font-semibold">⚠ Above your risk level</span>
                   </div>
                 )}
               </div>
@@ -187,50 +150,45 @@ export default function ChallengePlan({
             </div>
           )}
 
-          {/* Interactive Challenge Input Form */}
+          {/* Run Control: what the challenger does, and the button that runs it */}
           <form onSubmit={handleChallengeSubmit} className="rounded-2xl border border-slate-800 bg-[#0d1322]/90 p-4 shadow-md backdrop-blur-md flex flex-col gap-3">
             <div>
-              <label htmlFor="challenge-query" className="block text-xs font-semibold text-slate-300 mb-1">
-                Ask a question or test an assumption
-              </label>
-              <textarea
-                id="challenge-query"
-                rows={3}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="What could make this plan fail?"
-                className="w-full rounded-xl bg-slate-950/80 border border-slate-800 p-3 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition resize-none"
-              />
-            </div>
-
-            {/* Suggested Challenge Prompts */}
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                Suggested challenge questions:
+              <p className="text-xs font-semibold text-slate-300">
+                What the challenger tests
               </p>
-              <div className="flex flex-wrap gap-1.5">
-                {suggestedPrompts.map((prompt, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setQuery(prompt)}
-                    className="rounded-lg bg-slate-900/80 hover:bg-slate-800 px-2.5 py-1 text-[11px] text-slate-300 hover:text-white border border-slate-800 transition text-left cursor-pointer"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
+              <p className="mt-1 text-[11px] text-slate-400 leading-relaxed">
+                It argues against the plan you picked, using only your own numbers.
+                It checks whether the monthly commitment fits your surplus, whether
+                the plan survived the shock combinations, whether the equity share
+                matches how you have actually behaved in a falling market, and what
+                the plan gives up to reach your goal.
+              </p>
             </div>
 
-            {/* Submit Action Button */}
+            <ul className="space-y-1 text-[11px] text-slate-400">
+              <li className="flex items-start gap-2">
+                <span className="text-indigo-400">•</span>
+                <span>It never invents a number or a probability.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-indigo-400">•</span>
+                <span>It never sees your name, customer id, or transactions.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-indigo-400">•</span>
+                <span>It may suggest a different plan, but it will not rank all three.</span>
+              </li>
+            </ul>
+
             {error && (
-              <div className="mt-2 text-xs text-rose-400 bg-rose-500/10 p-2 rounded-lg border border-rose-500/20">
+              <div className="mt-1 text-xs text-rose-400 bg-rose-500/10 p-2 rounded-lg border border-rose-500/20">
                 {error}
               </div>
             )}
+
             <button
               type="submit"
-              disabled={isLoading || !selectedPlan}
+              disabled={isLoading || !selectedPlan || !customerId}
               className="mt-1 w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold text-white shadow-md shadow-indigo-600/30 transition flex items-center justify-center gap-2 cursor-pointer"
             >
               {isLoading ? (
@@ -242,15 +200,23 @@ export default function ChallengePlan({
                   <span>Challenging Plan {selectedPlan?.plan_id}...</span>
                 </>
               ) : (
-                <span>Challenge this plan</span>
+                <span>
+                  {selectedPlan ? `Challenge Plan ${selectedPlan.plan_id}` : 'Challenge this plan'}
+                </span>
               )}
             </button>
+
+            {!customerId && (
+              <p className="text-[11px] text-slate-500 text-center">
+                Available once a customer analysis is loaded.
+              </p>
+            )}
           </form>
         </div>
 
         {/* Right Column: Challenge Response & Evidence Area (7 cols) */}
         <div className="lg:col-span-7">
-          {challengeResult ? (
+          {activeChallenge ? (
             <div className="rounded-2xl border border-slate-800 bg-[#0d1322]/95 p-5 shadow-lg backdrop-blur-md flex flex-col gap-4 animate-fadeIn">
               {/* Header Badge */}
               <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
@@ -262,10 +228,13 @@ export default function ChallengePlan({
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-white">
-                      Challenger Evaluation: Plan {challengeResult.chosen_plan_id}
+                      Challenger Evaluation
+                      {activeChallenge.chosen_plan_id
+                        ? `: Plan ${activeChallenge.chosen_plan_id}`
+                        : ''}
                     </h3>
                     <p className="text-[11px] text-slate-400">
-                      Grounded in behavioral transaction history & cash flow
+                      Grounded in your cash flow and your past market behaviour
                     </p>
                   </div>
                 </div>
@@ -278,18 +247,18 @@ export default function ChallengePlan({
               {/* Challenge Narrative Body */}
               <div className="rounded-xl bg-slate-950/70 p-4 border border-slate-800/80">
                 <p className="text-xs text-slate-200 leading-relaxed">
-                  {challengeResult.challenge}
+                  {activeChallenge.challenge}
                 </p>
               </div>
 
               {/* Evidence Cited */}
-              {challengeResult.evidence_cited && challengeResult.evidence_cited.length > 0 && (
+              {activeChallenge.evidence_cited && activeChallenge.evidence_cited.length > 0 && (
                 <div className="space-y-2 pt-1">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
                     Behavioral & Financial Evidence Cited:
                   </p>
                   <div className="space-y-1.5">
-                    {challengeResult.evidence_cited.map((item, idx) => (
+                    {activeChallenge.evidence_cited.map((item, idx) => (
                       <div
                         key={idx}
                         className="flex items-start gap-2.5 rounded-lg bg-[#090e1a] p-2.5 border border-slate-800 text-xs text-slate-300"
@@ -304,7 +273,8 @@ export default function ChallengePlan({
                 </div>
               )}
 
-              {/* Suggested Alternative Plan Callout (if any) */}
+              {/* Suggested Alternative Plan Callout (if any). The reason names the
+                  alternative's own flags, so it cannot praise a plan that is worse. */}
               {alternativePlan && (
                 <div className="rounded-xl bg-emerald-950/20 p-4 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
@@ -312,7 +282,13 @@ export default function ChallengePlan({
                       Suggested Alternative Strategy
                     </span>
                     <p className="text-xs text-slate-200 mt-0.5">
-                      <strong className="text-white">Plan {alternativePlan.plan_id} ({alternativePlan.label})</strong> offers higher resilience with lower downside risk.
+                      <strong className="text-white">
+                        Plan {alternativePlan.plan_id} ({alternativePlan.label})
+                      </strong>{' '}
+                      at {formatINR(alternativePlan.monthly_investment)} a month
+                      {alternativePlan.feasible ? ', fits your surplus' : ''}
+                      {alternativePlan.survives_stress ? ' and survives the tested shocks' : ''}
+                      .
                     </p>
                   </div>
                   <button
@@ -331,8 +307,10 @@ export default function ChallengePlan({
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                   No fabricated numbers or probabilities
                 </span>
-                {challengeResult.numbers_used && (
-                  <span>{challengeResult.numbers_used.length} deterministic figures verified</span>
+                {activeChallenge.numbers_used && (
+                  <span>
+                    {activeChallenge.numbers_used.length} figures traced back to engine output
+                  </span>
                 )}
               </div>
             </div>
@@ -347,10 +325,27 @@ export default function ChallengePlan({
                 </svg>
               </div>
               <h3 className="text-sm font-bold text-slate-200">
-                Your plan hasn't been challenged yet.
+                {staleChallenge
+                  ? `You changed your pick to Plan ${selectedPlan?.plan_id}.`
+                  : "Your plan hasn't been challenged yet."}
               </h3>
               <p className="mt-1 max-w-sm text-xs text-slate-400 leading-relaxed">
-                Click <strong className="text-slate-300">"Challenge this plan"</strong> or select one of the suggested questions to test this plan against your financial capacity and past market panic points.
+                {staleChallenge ? (
+                  <>
+                    The earlier challenge argued against Plan{' '}
+                    {challengeResult.chosen_plan_id}, so it does not apply here.
+                    Run it again to challenge Plan {selectedPlan?.plan_id}.
+                  </>
+                ) : (
+                  <>
+                    Click{' '}
+                    <strong className="text-slate-300">
+                      {selectedPlan ? `"Challenge Plan ${selectedPlan.plan_id}"` : '"Challenge this plan"'}
+                    </strong>{' '}
+                    to argue against your own pick, using your financial capacity and
+                    your past reaction to market falls.
+                  </>
+                )}
               </p>
             </div>
           )}
