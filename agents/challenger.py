@@ -89,6 +89,7 @@ INSTRUCTIONS:
 5. Never identify the customer, account numbers, transactions, or individual peers. Do not reveal ground_truth_risk.
 6. Use ONLY numbers present in the payload. Do not invent arbitrary numbers.
 7. "alternative_suggested" must be exactly one plan id from {plan_ids}, or "none" if no other plan is better. No sentence, no explanation, no "Plan A" - just the letter.
+8. Write every number with the same digits the payload uses. Never convert a number into lakh, crore, million or thousand, and never write it as a decimal multiple: 1350000 stays 1350000 and must not become "1.35 million" or "13.5 lakh". Converting units is arithmetic, and a converted number will be rejected.
 
 FORMAT:
 Output valid JSON matching the exact schema provided.
