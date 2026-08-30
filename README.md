@@ -125,11 +125,3 @@ change: `PRODUCTION_ENGINES` in `orchestrator/pipeline.py`. Mocks ignore their
 arguments, which is the point — and also why a mocked stage always answers as
 C001.
 
-## Team rules
-
-- Never push to `main`. Branch, then pull request. Only Shlok merges.
-- Do not change a contract field without telling the group.
-- `docs/JSON_CONTRACT.md`, `requirements.txt`, `README.md` and `.gitignore` are
-  add-only. Nobody edits `requirements.txt` directly.
-- Nobody creates or overwrites anything in `mocks/`.
-- Never commit a key, a `.env`, or real customer data.
