@@ -90,9 +90,13 @@ def check_challenge(cid, pid, response, allowed):
 
     check(ch["chosen_plan_id"] == pid,
           f"{cid} plan {pid}: challenge is about the plan we asked about")
-    check(ch["alternative_suggested"] in PLANS and
+    # "none" is a legal answer - rule 7 offers it when no other plan is better,
+    # and the UI matches the value against the plan list, so anything that is not
+    # a plan id simply shows no switch button. The check used to demand a
+    # different plan, which failed C001 plan A for giving an honest answer.
+    check(ch["alternative_suggested"] in PLANS + ["none"] and
           ch["alternative_suggested"] != pid,
-          f"{cid} plan {pid}: suggests a real, different plan")
+          f"{cid} plan {pid}: suggests a real different plan, or none")
 
     for num in ch.get("numbers_used", []):
         check(in_bundle(num, allowed),
