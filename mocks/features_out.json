@@ -1,9 +1,7 @@
 {
-  "_mock_note": "Hand-written mock for contract section 3a. This is exactly what features.py returns - a flat feature vector and nothing else. It must never import the model, and the model must never see a raw customer record. panic_sell_count and avg_days_to_exit_after_drop come from investment_events in customer_C001.json (two sells, both 3 days after a drop). expense_volatility and budget_overshoot_rate need the full 24 months and cannot be reproduced from the single month in the mock customer record.",
-
   "panic_sell_count": 2,
   "avg_days_to_exit_after_drop": 3.0,
-  "expense_volatility": 0.34,
+  "expense_volatility": 0.12,
   "emergency_fund_months": 0.4,
   "equity_allocation_pct": 0.5,
   "budget_overshoot_rate": 0.42

@@ -1,13 +1,11 @@
 {
   "_mock_note": "Hand-written mock for contract section 7 - the de-identified payload handed to every agent. Note what is absent: no name, no customer_id, no ground_truth_risk, no expected_annual_return. Age, dependents, employment and city tier ARE here, because they are attributes rather than identifiers and the agent cannot write anything contextual without them. Field names are stated/revealed and survives_stress - renamed once, here, from what sections 3 and 6 output. Every number an agent is allowed to say must appear somewhere in this file, exactly. No addition, no subtraction, no rounding, no percent-to-count conversion.",
-
   "context": {
     "age": 28,
     "dependents": 1,
     "employment_type": "salaried",
     "city_tier": "metro"
   },
-
   "profile": {
     "net_worth": 600000,
     "monthly_income": 120000,
@@ -22,7 +20,6 @@
       "Five year horizon is long enough to recover from a single bad year"
     ]
   },
-
   "risk": {
     "stated": "aggressive",
     "revealed": "moderate",
@@ -36,122 +33,163 @@
       "Monthly spending overshoots its own 12 month average 42% of the time"
     ]
   },
-
   "goals": [
-    { "name": "house_downpayment", "target_amount": 2500000, "years": 5, "priority": 1 },
-    { "name": "child_education", "target_amount": 1800000, "years": 12, "priority": 2 }
+    {
+      "name": "house_downpayment",
+      "target_amount": 2500000,
+      "years": 5,
+      "priority": 1
+    },
+    {
+      "name": "child_education",
+      "target_amount": 1800000,
+      "years": 12,
+      "priority": 2
+    }
   ],
-
   "plans": [
     {
       "plan_id": "A",
       "label": "Steady",
       "monthly_investment": 35000,
       "surplus_after_investment": 10000,
-      "allocation": { "equity": 0.4, "debt": 0.6 },
+      "allocation": {
+        "equity": 0.4,
+        "debt": 0.6
+      },
       "projected_corpus": 2660000,
       "goal_amount": 2500000,
       "years": 5,
-      "feasible": true,
       "shortfall": 0,
-      "success_probability": 0.87,
-      "successful_simulations": 8700,
-      "median_corpus": 2680000,
-      "p10_corpus": 2150000,
-      "p90_corpus": 3320000,
-      "p10_gap_to_goal": 350000,
-      "survives_stress": true,
-      "breaking_combo": null,
-      "breaking_probability": null,
-      "shortfall_if_hit": null,
-      "exceeds_risk_ceiling": false
+      "feasible": true,
+      "exceeds_risk_ceiling": false,
+      "success_probability": 0.7376,
+      "successful_simulations": 7376,
+      "median_corpus": 3076480,
+      "p10_corpus": 1855503,
+      "p90_corpus": 4412578,
+      "p10_gap_to_goal": 644497,
+      "survives_stress": false,
+      "breaking_combo": [
+        {
+          "event_id": "car_repair",
+          "label": "Unexpected major vehicle repair",
+          "annual_probability": 0.15,
+          "cash_impact": -50000
+        },
+        {
+          "event_id": "appliance_failure",
+          "label": "Refrigerator or AC replacement",
+          "annual_probability": 0.2,
+          "cash_impact": -40000
+        },
+        {
+          "event_id": "home_repair",
+          "label": "Urgent plumbing or roof repair",
+          "annual_probability": 0.12,
+          "cash_impact": -75000
+        }
+      ],
+      "breaking_probability": 0.0036,
+      "shortfall_if_hit": 5000
     },
     {
       "plan_id": "B",
       "label": "Balanced",
       "monthly_investment": 30000,
       "surplus_after_investment": 15000,
-      "allocation": { "equity": 0.65, "debt": 0.35 },
+      "allocation": {
+        "equity": 0.65,
+        "debt": 0.35
+      },
       "projected_corpus": 2410000,
       "goal_amount": 2500000,
       "years": 5,
-      "feasible": true,
       "shortfall": 0,
-      "success_probability": 0.71,
-      "successful_simulations": 7100,
-      "median_corpus": 2560000,
-      "p10_corpus": 1780000,
-      "p90_corpus": 3610000,
-      "p10_gap_to_goal": 720000,
+      "feasible": true,
+      "exceeds_risk_ceiling": false,
+      "success_probability": 0.5691,
+      "successful_simulations": 5691,
+      "median_corpus": 2633260,
+      "p10_corpus": 1578975,
+      "p90_corpus": 3779172,
+      "p10_gap_to_goal": 921025,
       "survives_stress": false,
       "breaking_combo": [
         {
-          "event_id": "appraisal_miss",
-          "label": "Appraisal comes in at 4% instead of 10%",
-          "annual_probability": 0.23,
-          "cash_impact": -180000
+          "event_id": "car_repair",
+          "label": "Unexpected major vehicle repair",
+          "annual_probability": 0.15,
+          "cash_impact": -50000
         },
         {
-          "event_id": "medical_expense",
-          "label": "Family medical expense",
-          "annual_probability": 0.10,
-          "cash_impact": -200000
+          "event_id": "appliance_failure",
+          "label": "Refrigerator or AC replacement",
+          "annual_probability": 0.2,
+          "cash_impact": -40000
         }
       ],
-      "breaking_probability": 0.023,
-      "shortfall_if_hit": 420000,
-      "exceeds_risk_ceiling": false
+      "breaking_probability": 0.03,
+      "shortfall_if_hit": 180000
     },
     {
       "plan_id": "C",
       "label": "Growth",
       "monthly_investment": 52000,
       "surplus_after_investment": -7000,
-      "allocation": { "equity": 0.85, "debt": 0.15 },
+      "allocation": {
+        "equity": 0.85,
+        "debt": 0.15
+      },
       "projected_corpus": 4410000,
       "goal_amount": 2500000,
       "years": 5,
-      "feasible": false,
       "shortfall": 7000,
-      "success_probability": 0.95,
-      "successful_simulations": 9500,
-      "median_corpus": 4690000,
-      "p10_corpus": 2920000,
-      "p90_corpus": 6720000,
+      "feasible": false,
+      "exceeds_risk_ceiling": true,
+      "success_probability": 0.924,
+      "successful_simulations": 9240,
+      "median_corpus": 4573106,
+      "p10_corpus": 2734374,
+      "p90_corpus": 6563824,
       "p10_gap_to_goal": 0,
-      "survives_stress": false,
-      "breaking_combo": [
-        {
-          "event_id": "appraisal_miss",
-          "label": "Appraisal comes in at 4% instead of 10%",
-          "annual_probability": 0.23,
-          "cash_impact": -180000
-        },
-        {
-          "event_id": "medical_expense",
-          "label": "Family medical expense",
-          "annual_probability": 0.10,
-          "cash_impact": -200000
-        },
-        {
-          "event_id": "rent_hike",
-          "label": "Landlord raises rent by 15%",
-          "annual_probability": 0.30,
-          "cash_impact": -120000
-        }
-      ],
-      "breaking_probability": 0.007,
-      "shortfall_if_hit": 690000,
-      "exceeds_risk_ceiling": true
+      "survives_stress": true,
+      "breaking_combo": null,
+      "breaking_probability": null,
+      "shortfall_if_hit": null
     }
   ],
-
   "comparisons": {
     "cheapest_plan_id": "B",
     "highest_success_plan_id": "C",
     "plan_count": 3,
-    "monthly_investment_delta_vs_cheapest": { "A": 5000, "B": 0, "C": 22000 }
+    "monthly_investment_delta_vs_cheapest": {
+      "A": 5000,
+      "B": 0,
+      "C": 22000
+    }
   },
-
-  "n_simulations": 10000
+  "n_simulations": 10000,
+  "peer_cohort": {
+    "cohort_size": 87,
+    "matched_on": [
+      "age_band",
+      "income_band",
+      "goal_type",
+      "stated_risk"
+    ],
+    "age_band": "26-30",
+    "income_band": "100000-150000",
+    "goal_type": "house_downpayment",
+    "median_monthly_surplus": 38000,
+    "median_savings_rate": 0.32,
+    "customer_savings_rate": 0.375,
+    "savings_rate_percentile": 68,
+    "mismatch_rate": 0.61,
+    "most_common_plan_label": "Balanced",
+    "most_common_allocation": {
+      "equity": 0.6,
+      "debt": 0.4
+    }
+  }
 }

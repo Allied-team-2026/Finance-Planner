@@ -1,0 +1,1315 @@
+{
+  "customer_id": "C003",
+  "name": "Vivaan Patel",
+  "age": 31,
+  "dependents": 4,
+  "employment_type": "self_employed",
+  "city_tier": "tier_3",
+  "stated_risk": "aggressive",
+  "monthly_income": 79000,
+  "assets": {
+    "savings_account": 300000,
+    "equity_mf": 760000,
+    "fixed_deposit": 310000
+  },
+  "liabilities": [
+    {
+      "type": "education_loan",
+      "outstanding": 780000,
+      "emi": 27000
+    }
+  ],
+  "goals": [
+    {
+      "name": "wedding",
+      "target_amount": 1350000,
+      "years": 2,
+      "priority": 1
+    },
+    {
+      "name": "car_purchase",
+      "target_amount": 900000,
+      "years": 15,
+      "priority": 2
+    },
+    {
+      "name": "vacation",
+      "target_amount": 1000000,
+      "years": 8,
+      "priority": 3
+    }
+  ],
+  "transactions": [
+    {
+      "date": "2024-08-26",
+      "category": "emi",
+      "amount": 2600
+    },
+    {
+      "date": "2024-08-21",
+      "category": "education",
+      "amount": 1100
+    },
+    {
+      "date": "2024-08-24",
+      "category": "entertainment",
+      "amount": 1200
+    },
+    {
+      "date": "2024-08-11",
+      "category": "health",
+      "amount": 700
+    },
+    {
+      "date": "2024-08-11",
+      "category": "misc",
+      "amount": 8200
+    },
+    {
+      "date": "2024-08-17",
+      "category": "dining",
+      "amount": 2600
+    },
+    {
+      "date": "2024-08-22",
+      "category": "rent",
+      "amount": 17200
+    },
+    {
+      "date": "2024-08-23",
+      "category": "groceries",
+      "amount": 6600
+    },
+    {
+      "date": "2024-08-15",
+      "category": "shopping",
+      "amount": 1000
+    },
+    {
+      "date": "2024-08-06",
+      "category": "insurance",
+      "amount": 1400
+    },
+    {
+      "date": "2024-09-18",
+      "category": "health",
+      "amount": 2700
+    },
+    {
+      "date": "2024-09-14",
+      "category": "transport",
+      "amount": 4700
+    },
+    {
+      "date": "2024-09-15",
+      "category": "rent",
+      "amount": 10600
+    },
+    {
+      "date": "2024-09-19",
+      "category": "dining",
+      "amount": 2300
+    },
+    {
+      "date": "2024-09-02",
+      "category": "misc",
+      "amount": 5300
+    },
+    {
+      "date": "2024-09-05",
+      "category": "utilities",
+      "amount": 3500
+    },
+    {
+      "date": "2024-09-01",
+      "category": "education",
+      "amount": 800
+    },
+    {
+      "date": "2024-09-04",
+      "category": "groceries",
+      "amount": 11100
+    },
+    {
+      "date": "2024-09-26",
+      "category": "insurance",
+      "amount": 1100
+    },
+    {
+      "date": "2024-10-11",
+      "category": "groceries",
+      "amount": 7300
+    },
+    {
+      "date": "2024-10-13",
+      "category": "shopping",
+      "amount": 2500
+    },
+    {
+      "date": "2024-10-12",
+      "category": "insurance",
+      "amount": 3800
+    },
+    {
+      "date": "2024-10-02",
+      "category": "rent",
+      "amount": 23800
+    },
+    {
+      "date": "2024-10-06",
+      "category": "utilities",
+      "amount": 5200
+    },
+    {
+      "date": "2024-10-18",
+      "category": "dining",
+      "amount": 5700
+    },
+    {
+      "date": "2024-10-06",
+      "category": "emi",
+      "amount": 5300
+    },
+    {
+      "date": "2024-10-26",
+      "category": "health",
+      "amount": 2900
+    },
+    {
+      "date": "2024-10-27",
+      "category": "education",
+      "amount": 2500
+    },
+    {
+      "date": "2024-11-12",
+      "category": "shopping",
+      "amount": 1100
+    },
+    {
+      "date": "2024-11-09",
+      "category": "dining",
+      "amount": 1400
+    },
+    {
+      "date": "2024-11-08",
+      "category": "misc",
+      "amount": 9300
+    },
+    {
+      "date": "2024-11-05",
+      "category": "rent",
+      "amount": 18400
+    },
+    {
+      "date": "2024-11-15",
+      "category": "groceries",
+      "amount": 8800
+    },
+    {
+      "date": "2024-11-25",
+      "category": "health",
+      "amount": 1400
+    },
+    {
+      "date": "2024-11-13",
+      "category": "education",
+      "amount": 900
+    },
+    {
+      "date": "2024-11-05",
+      "category": "transport",
+      "amount": 1900
+    },
+    {
+      "date": "2024-12-16",
+      "category": "misc",
+      "amount": 7700
+    },
+    {
+      "date": "2024-12-23",
+      "category": "insurance",
+      "amount": 1000
+    },
+    {
+      "date": "2024-12-11",
+      "category": "groceries",
+      "amount": 5100
+    },
+    {
+      "date": "2024-12-05",
+      "category": "entertainment",
+      "amount": 1100
+    },
+    {
+      "date": "2024-12-11",
+      "category": "education",
+      "amount": 600
+    },
+    {
+      "date": "2024-12-08",
+      "category": "utilities",
+      "amount": 2400
+    },
+    {
+      "date": "2024-12-01",
+      "category": "transport",
+      "amount": 4900
+    },
+    {
+      "date": "2024-12-24",
+      "category": "shopping",
+      "amount": 2600
+    },
+    {
+      "date": "2024-12-07",
+      "category": "rent",
+      "amount": 19100
+    },
+    {
+      "date": "2025-01-24",
+      "category": "groceries",
+      "amount": 7100
+    },
+    {
+      "date": "2025-01-26",
+      "category": "health",
+      "amount": 700
+    },
+    {
+      "date": "2025-01-17",
+      "category": "insurance",
+      "amount": 800
+    },
+    {
+      "date": "2025-01-02",
+      "category": "rent",
+      "amount": 19000
+    },
+    {
+      "date": "2025-01-09",
+      "category": "misc",
+      "amount": 8300
+    },
+    {
+      "date": "2025-01-06",
+      "category": "emi",
+      "amount": 5200
+    },
+    {
+      "date": "2025-01-16",
+      "category": "education",
+      "amount": 1300
+    },
+    {
+      "date": "2025-01-15",
+      "category": "shopping",
+      "amount": 1300
+    },
+    {
+      "date": "2025-01-14",
+      "category": "entertainment",
+      "amount": 2000
+    },
+    {
+      "date": "2025-01-10",
+      "category": "dining",
+      "amount": 3100
+    },
+    {
+      "date": "2025-02-07",
+      "category": "rent",
+      "amount": 9700
+    },
+    {
+      "date": "2025-02-09",
+      "category": "entertainment",
+      "amount": 1400
+    },
+    {
+      "date": "2025-02-16",
+      "category": "insurance",
+      "amount": 1400
+    },
+    {
+      "date": "2025-02-13",
+      "category": "emi",
+      "amount": 1900
+    },
+    {
+      "date": "2025-02-17",
+      "category": "education",
+      "amount": 600
+    },
+    {
+      "date": "2025-02-06",
+      "category": "shopping",
+      "amount": 2400
+    },
+    {
+      "date": "2025-02-09",
+      "category": "groceries",
+      "amount": 7900
+    },
+    {
+      "date": "2025-02-27",
+      "category": "health",
+      "amount": 900
+    },
+    {
+      "date": "2025-02-04",
+      "category": "misc",
+      "amount": 4500
+    },
+    {
+      "date": "2025-02-27",
+      "category": "transport",
+      "amount": 4400
+    },
+    {
+      "date": "2025-02-24",
+      "category": "dining",
+      "amount": 2900
+    },
+    {
+      "date": "2025-02-17",
+      "category": "utilities",
+      "amount": 2700
+    },
+    {
+      "date": "2025-03-14",
+      "category": "groceries",
+      "amount": 4900
+    },
+    {
+      "date": "2025-03-16",
+      "category": "shopping",
+      "amount": 3300
+    },
+    {
+      "date": "2025-03-05",
+      "category": "entertainment",
+      "amount": 2000
+    },
+    {
+      "date": "2025-03-06",
+      "category": "emi",
+      "amount": 3100
+    },
+    {
+      "date": "2025-03-12",
+      "category": "utilities",
+      "amount": 2100
+    },
+    {
+      "date": "2025-03-01",
+      "category": "health",
+      "amount": 2500
+    },
+    {
+      "date": "2025-03-03",
+      "category": "insurance",
+      "amount": 1900
+    },
+    {
+      "date": "2025-03-09",
+      "category": "transport",
+      "amount": 2800
+    },
+    {
+      "date": "2025-03-11",
+      "category": "rent",
+      "amount": 24000
+    },
+    {
+      "date": "2025-04-20",
+      "category": "emi",
+      "amount": 5500
+    },
+    {
+      "date": "2025-04-28",
+      "category": "transport",
+      "amount": 4100
+    },
+    {
+      "date": "2025-04-17",
+      "category": "insurance",
+      "amount": 2000
+    },
+    {
+      "date": "2025-04-22",
+      "category": "dining",
+      "amount": 4100
+    },
+    {
+      "date": "2025-04-28",
+      "category": "rent",
+      "amount": 15700
+    },
+    {
+      "date": "2025-04-26",
+      "category": "misc",
+      "amount": 13000
+    },
+    {
+      "date": "2025-04-26",
+      "category": "education",
+      "amount": 2700
+    },
+    {
+      "date": "2025-04-22",
+      "category": "groceries",
+      "amount": 8100
+    },
+    {
+      "date": "2025-04-22",
+      "category": "utilities",
+      "amount": 2500
+    },
+    {
+      "date": "2025-05-13",
+      "category": "groceries",
+      "amount": 5400
+    },
+    {
+      "date": "2025-05-08",
+      "category": "insurance",
+      "amount": 1700
+    },
+    {
+      "date": "2025-05-16",
+      "category": "entertainment",
+      "amount": 800
+    },
+    {
+      "date": "2025-05-25",
+      "category": "rent",
+      "amount": 17000
+    },
+    {
+      "date": "2025-05-01",
+      "category": "shopping",
+      "amount": 1000
+    },
+    {
+      "date": "2025-05-08",
+      "category": "misc",
+      "amount": 3600
+    },
+    {
+      "date": "2025-05-11",
+      "category": "health",
+      "amount": 800
+    },
+    {
+      "date": "2025-05-12",
+      "category": "dining",
+      "amount": 1300
+    },
+    {
+      "date": "2025-05-04",
+      "category": "utilities",
+      "amount": 2700
+    },
+    {
+      "date": "2025-05-13",
+      "category": "emi",
+      "amount": 4900
+    },
+    {
+      "date": "2025-05-03",
+      "category": "education",
+      "amount": 1000
+    },
+    {
+      "date": "2025-05-05",
+      "category": "transport",
+      "amount": 3800
+    },
+    {
+      "date": "2025-06-28",
+      "category": "education",
+      "amount": 900
+    },
+    {
+      "date": "2025-06-18",
+      "category": "groceries",
+      "amount": 8000
+    },
+    {
+      "date": "2025-06-10",
+      "category": "entertainment",
+      "amount": 1500
+    },
+    {
+      "date": "2025-06-01",
+      "category": "transport",
+      "amount": 3200
+    },
+    {
+      "date": "2025-06-12",
+      "category": "rent",
+      "amount": 18000
+    },
+    {
+      "date": "2025-06-15",
+      "category": "utilities",
+      "amount": 1300
+    },
+    {
+      "date": "2025-06-10",
+      "category": "misc",
+      "amount": 3700
+    },
+    {
+      "date": "2025-06-02",
+      "category": "emi",
+      "amount": 2000
+    },
+    {
+      "date": "2025-06-04",
+      "category": "insurance",
+      "amount": 1100
+    },
+    {
+      "date": "2025-07-23",
+      "category": "transport",
+      "amount": 4000
+    },
+    {
+      "date": "2025-07-15",
+      "category": "insurance",
+      "amount": 1800
+    },
+    {
+      "date": "2025-07-25",
+      "category": "dining",
+      "amount": 2700
+    },
+    {
+      "date": "2025-07-18",
+      "category": "groceries",
+      "amount": 9400
+    },
+    {
+      "date": "2025-07-16",
+      "category": "health",
+      "amount": 1400
+    },
+    {
+      "date": "2025-07-24",
+      "category": "misc",
+      "amount": 9100
+    },
+    {
+      "date": "2025-07-09",
+      "category": "rent",
+      "amount": 16700
+    },
+    {
+      "date": "2025-07-25",
+      "category": "education",
+      "amount": 1800
+    },
+    {
+      "date": "2025-07-27",
+      "category": "entertainment",
+      "amount": 1500
+    },
+    {
+      "date": "2025-07-22",
+      "category": "emi",
+      "amount": 3000
+    },
+    {
+      "date": "2025-07-26",
+      "category": "shopping",
+      "amount": 3600
+    },
+    {
+      "date": "2025-07-27",
+      "category": "utilities",
+      "amount": 3100
+    },
+    {
+      "date": "2025-08-21",
+      "category": "transport",
+      "amount": 2800
+    },
+    {
+      "date": "2025-08-08",
+      "category": "misc",
+      "amount": 9000
+    },
+    {
+      "date": "2025-08-01",
+      "category": "health",
+      "amount": 700
+    },
+    {
+      "date": "2025-08-22",
+      "category": "groceries",
+      "amount": 10200
+    },
+    {
+      "date": "2025-08-26",
+      "category": "utilities",
+      "amount": 3400
+    },
+    {
+      "date": "2025-08-03",
+      "category": "rent",
+      "amount": 8300
+    },
+    {
+      "date": "2025-08-09",
+      "category": "insurance",
+      "amount": 1800
+    },
+    {
+      "date": "2025-08-09",
+      "category": "dining",
+      "amount": 1900
+    },
+    {
+      "date": "2025-08-06",
+      "category": "entertainment",
+      "amount": 2200
+    },
+    {
+      "date": "2025-08-19",
+      "category": "emi",
+      "amount": 3700
+    },
+    {
+      "date": "2025-08-15",
+      "category": "shopping",
+      "amount": 2400
+    },
+    {
+      "date": "2025-08-17",
+      "category": "education",
+      "amount": 700
+    },
+    {
+      "date": "2025-09-19",
+      "category": "insurance",
+      "amount": 2000
+    },
+    {
+      "date": "2025-09-26",
+      "category": "misc",
+      "amount": 11400
+    },
+    {
+      "date": "2025-09-19",
+      "category": "education",
+      "amount": 800
+    },
+    {
+      "date": "2025-09-12",
+      "category": "rent",
+      "amount": 17900
+    },
+    {
+      "date": "2025-09-11",
+      "category": "transport",
+      "amount": 3300
+    },
+    {
+      "date": "2025-09-27",
+      "category": "entertainment",
+      "amount": 1400
+    },
+    {
+      "date": "2025-09-23",
+      "category": "health",
+      "amount": 1600
+    },
+    {
+      "date": "2025-09-19",
+      "category": "dining",
+      "amount": 4100
+    },
+    {
+      "date": "2025-09-01",
+      "category": "groceries",
+      "amount": 8100
+    },
+    {
+      "date": "2025-09-05",
+      "category": "emi",
+      "amount": 5800
+    },
+    {
+      "date": "2025-10-11",
+      "category": "utilities",
+      "amount": 4100
+    },
+    {
+      "date": "2025-10-07",
+      "category": "rent",
+      "amount": 17700
+    },
+    {
+      "date": "2025-10-10",
+      "category": "misc",
+      "amount": 10600
+    },
+    {
+      "date": "2025-10-01",
+      "category": "insurance",
+      "amount": 1300
+    },
+    {
+      "date": "2025-10-13",
+      "category": "transport",
+      "amount": 4100
+    },
+    {
+      "date": "2025-10-19",
+      "category": "entertainment",
+      "amount": 1300
+    },
+    {
+      "date": "2025-10-28",
+      "category": "groceries",
+      "amount": 9900
+    },
+    {
+      "date": "2025-10-02",
+      "category": "education",
+      "amount": 1200
+    },
+    {
+      "date": "2025-10-24",
+      "category": "shopping",
+      "amount": 2500
+    },
+    {
+      "date": "2025-10-19",
+      "category": "emi",
+      "amount": 3000
+    },
+    {
+      "date": "2025-11-24",
+      "category": "transport",
+      "amount": 5400
+    },
+    {
+      "date": "2025-11-16",
+      "category": "misc",
+      "amount": 5800
+    },
+    {
+      "date": "2025-11-20",
+      "category": "groceries",
+      "amount": 9400
+    },
+    {
+      "date": "2025-11-14",
+      "category": "emi",
+      "amount": 5400
+    },
+    {
+      "date": "2025-11-27",
+      "category": "entertainment",
+      "amount": 1500
+    },
+    {
+      "date": "2025-11-18",
+      "category": "insurance",
+      "amount": 2000
+    },
+    {
+      "date": "2025-11-22",
+      "category": "rent",
+      "amount": 12800
+    },
+    {
+      "date": "2025-11-21",
+      "category": "utilities",
+      "amount": 3600
+    },
+    {
+      "date": "2025-12-23",
+      "category": "education",
+      "amount": 700
+    },
+    {
+      "date": "2025-12-22",
+      "category": "dining",
+      "amount": 2800
+    },
+    {
+      "date": "2025-12-10",
+      "category": "shopping",
+      "amount": 1300
+    },
+    {
+      "date": "2025-12-18",
+      "category": "rent",
+      "amount": 15500
+    },
+    {
+      "date": "2025-12-25",
+      "category": "utilities",
+      "amount": 2600
+    },
+    {
+      "date": "2025-12-21",
+      "category": "misc",
+      "amount": 9200
+    },
+    {
+      "date": "2025-12-24",
+      "category": "emi",
+      "amount": 3400
+    },
+    {
+      "date": "2025-12-15",
+      "category": "health",
+      "amount": 2000
+    },
+    {
+      "date": "2025-12-09",
+      "category": "entertainment",
+      "amount": 1200
+    },
+    {
+      "date": "2025-12-05",
+      "category": "insurance",
+      "amount": 2400
+    },
+    {
+      "date": "2025-12-26",
+      "category": "groceries",
+      "amount": 11700
+    },
+    {
+      "date": "2025-12-11",
+      "category": "transport",
+      "amount": 4000
+    },
+    {
+      "date": "2026-01-08",
+      "category": "utilities",
+      "amount": 2100
+    },
+    {
+      "date": "2026-01-18",
+      "category": "insurance",
+      "amount": 1700
+    },
+    {
+      "date": "2026-01-09",
+      "category": "dining",
+      "amount": 2900
+    },
+    {
+      "date": "2026-01-03",
+      "category": "education",
+      "amount": 800
+    },
+    {
+      "date": "2026-01-03",
+      "category": "shopping",
+      "amount": 1400
+    },
+    {
+      "date": "2026-01-06",
+      "category": "groceries",
+      "amount": 4000
+    },
+    {
+      "date": "2026-01-27",
+      "category": "entertainment",
+      "amount": 1200
+    },
+    {
+      "date": "2026-01-10",
+      "category": "rent",
+      "amount": 17600
+    },
+    {
+      "date": "2026-01-09",
+      "category": "transport",
+      "amount": 1800
+    },
+    {
+      "date": "2026-01-22",
+      "category": "emi",
+      "amount": 3600
+    },
+    {
+      "date": "2026-01-16",
+      "category": "misc",
+      "amount": 6200
+    },
+    {
+      "date": "2026-01-10",
+      "category": "health",
+      "amount": 700
+    },
+    {
+      "date": "2026-02-27",
+      "category": "education",
+      "amount": 1600
+    },
+    {
+      "date": "2026-02-13",
+      "category": "insurance",
+      "amount": 2000
+    },
+    {
+      "date": "2026-02-24",
+      "category": "utilities",
+      "amount": 2900
+    },
+    {
+      "date": "2026-02-23",
+      "category": "dining",
+      "amount": 3700
+    },
+    {
+      "date": "2026-02-20",
+      "category": "health",
+      "amount": 2400
+    },
+    {
+      "date": "2026-02-14",
+      "category": "groceries",
+      "amount": 4500
+    },
+    {
+      "date": "2026-02-02",
+      "category": "emi",
+      "amount": 2800
+    },
+    {
+      "date": "2026-02-28",
+      "category": "entertainment",
+      "amount": 2200
+    },
+    {
+      "date": "2026-02-10",
+      "category": "transport",
+      "amount": 3100
+    },
+    {
+      "date": "2026-02-15",
+      "category": "rent",
+      "amount": 15000
+    },
+    {
+      "date": "2026-02-09",
+      "category": "shopping",
+      "amount": 2700
+    },
+    {
+      "date": "2026-02-14",
+      "category": "misc",
+      "amount": 7000
+    },
+    {
+      "date": "2026-03-26",
+      "category": "emi",
+      "amount": 3100
+    },
+    {
+      "date": "2026-03-12",
+      "category": "rent",
+      "amount": 12800
+    },
+    {
+      "date": "2026-03-22",
+      "category": "dining",
+      "amount": 4600
+    },
+    {
+      "date": "2026-03-05",
+      "category": "utilities",
+      "amount": 1800
+    },
+    {
+      "date": "2026-03-24",
+      "category": "shopping",
+      "amount": 2900
+    },
+    {
+      "date": "2026-03-23",
+      "category": "education",
+      "amount": 600
+    },
+    {
+      "date": "2026-03-08",
+      "category": "entertainment",
+      "amount": 900
+    },
+    {
+      "date": "2026-03-10",
+      "category": "groceries",
+      "amount": 10000
+    },
+    {
+      "date": "2026-03-04",
+      "category": "transport",
+      "amount": 5000
+    },
+    {
+      "date": "2026-04-28",
+      "category": "health",
+      "amount": 2000
+    },
+    {
+      "date": "2026-04-01",
+      "category": "emi",
+      "amount": 2800
+    },
+    {
+      "date": "2026-04-17",
+      "category": "insurance",
+      "amount": 1400
+    },
+    {
+      "date": "2026-04-10",
+      "category": "rent",
+      "amount": 24100
+    },
+    {
+      "date": "2026-04-23",
+      "category": "entertainment",
+      "amount": 1500
+    },
+    {
+      "date": "2026-04-17",
+      "category": "groceries",
+      "amount": 9200
+    },
+    {
+      "date": "2026-04-04",
+      "category": "transport",
+      "amount": 5100
+    },
+    {
+      "date": "2026-04-17",
+      "category": "education",
+      "amount": 900
+    },
+    {
+      "date": "2026-05-01",
+      "category": "dining",
+      "amount": 3600
+    },
+    {
+      "date": "2026-05-06",
+      "category": "health",
+      "amount": 1300
+    },
+    {
+      "date": "2026-05-10",
+      "category": "insurance",
+      "amount": 1600
+    },
+    {
+      "date": "2026-05-16",
+      "category": "misc",
+      "amount": 5700
+    },
+    {
+      "date": "2026-05-12",
+      "category": "transport",
+      "amount": 3400
+    },
+    {
+      "date": "2026-05-21",
+      "category": "utilities",
+      "amount": 3200
+    },
+    {
+      "date": "2026-05-18",
+      "category": "entertainment",
+      "amount": 1800
+    },
+    {
+      "date": "2026-05-08",
+      "category": "shopping",
+      "amount": 1000
+    },
+    {
+      "date": "2026-05-07",
+      "category": "education",
+      "amount": 1200
+    },
+    {
+      "date": "2026-05-03",
+      "category": "rent",
+      "amount": 15400
+    },
+    {
+      "date": "2026-05-17",
+      "category": "emi",
+      "amount": 5300
+    },
+    {
+      "date": "2026-05-25",
+      "category": "groceries",
+      "amount": 3700
+    },
+    {
+      "date": "2026-06-27",
+      "category": "groceries",
+      "amount": 5800
+    },
+    {
+      "date": "2026-06-06",
+      "category": "utilities",
+      "amount": 4200
+    },
+    {
+      "date": "2026-06-21",
+      "category": "transport",
+      "amount": 5200
+    },
+    {
+      "date": "2026-06-27",
+      "category": "rent",
+      "amount": 12100
+    },
+    {
+      "date": "2026-06-23",
+      "category": "dining",
+      "amount": 2400
+    },
+    {
+      "date": "2026-06-04",
+      "category": "insurance",
+      "amount": 3000
+    },
+    {
+      "date": "2026-06-27",
+      "category": "shopping",
+      "amount": 2200
+    },
+    {
+      "date": "2026-06-01",
+      "category": "education",
+      "amount": 1000
+    },
+    {
+      "date": "2026-06-28",
+      "category": "misc",
+      "amount": 10600
+    },
+    {
+      "date": "2026-07-14",
+      "category": "dining",
+      "amount": 3200
+    },
+    {
+      "date": "2026-07-26",
+      "category": "shopping",
+      "amount": 1300
+    },
+    {
+      "date": "2026-07-08",
+      "category": "insurance",
+      "amount": 1200
+    },
+    {
+      "date": "2026-07-28",
+      "category": "utilities",
+      "amount": 3600
+    },
+    {
+      "date": "2026-07-28",
+      "category": "health",
+      "amount": 1000
+    },
+    {
+      "date": "2026-07-18",
+      "category": "emi",
+      "amount": 2400
+    },
+    {
+      "date": "2026-07-09",
+      "category": "entertainment",
+      "amount": 1600
+    },
+    {
+      "date": "2026-07-27",
+      "category": "education",
+      "amount": 600
+    },
+    {
+      "date": "2026-07-18",
+      "category": "groceries",
+      "amount": 9000
+    },
+    {
+      "date": "2026-07-21",
+      "category": "transport",
+      "amount": 3200
+    },
+    {
+      "date": "2026-07-06",
+      "category": "rent",
+      "amount": 17600
+    },
+    {
+      "date": "2026-07-21",
+      "category": "misc",
+      "amount": 6000
+    }
+  ],
+  "investment_events": [
+    {
+      "date": "2024-01-04",
+      "action": "sell",
+      "instrument": "equity_mf",
+      "amount": 240000,
+      "market_drawdown_pct": 0.0,
+      "days_after_drop": null
+    },
+    {
+      "date": "2024-07-13",
+      "action": "buy",
+      "instrument": "equity_mf",
+      "amount": 270000,
+      "market_drawdown_pct": 0.0,
+      "days_after_drop": null
+    },
+    {
+      "date": "2024-08-19",
+      "action": "buy",
+      "instrument": "equity_mf",
+      "amount": 300000,
+      "market_drawdown_pct": 0.0,
+      "days_after_drop": null
+    },
+    {
+      "date": "2024-08-19",
+      "action": "buy",
+      "instrument": "equity_mf",
+      "amount": 400000,
+      "market_drawdown_pct": 0.0,
+      "days_after_drop": null
+    },
+    {
+      "date": "2024-11-13",
+      "action": "sell",
+      "instrument": "equity_mf",
+      "amount": 220000,
+      "market_drawdown_pct": 4.3,
+      "days_after_drop": 8
+    },
+    {
+      "date": "2025-08-12",
+      "action": "buy",
+      "instrument": "equity_mf",
+      "amount": 260000,
+      "market_drawdown_pct": 0.0,
+      "days_after_drop": null
+    }
+  ],
+  "ground_truth_risk": "moderate"
+}

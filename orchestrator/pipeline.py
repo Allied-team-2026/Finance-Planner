@@ -15,6 +15,10 @@ from datetime import datetime, timezone
 from importlib import import_module
 from pathlib import Path
 import json
+import math
+import groq
+
+from agents.numeric import extract_numbers_with_paths
 
 MOCKS = Path(__file__).resolve().parent.parent / "mocks"
 SCHEMA_VERSION = "api-v1"
@@ -22,7 +26,20 @@ SCHEMA_VERSION = "api-v1"
 # Add a stage name here once its engine passes its own test. Anything not listed
 # runs on its mock. Keep this list honest - a stage listed here that returns
 # rubbish is worse than a mock, because the response still looks complete.
-REAL_ENGINES = set()
+PRODUCTION_ENGINES = {
+    "customer",
+    "profile",
+    "features",
+    "risk",
+    "plans",
+    "montecarlo",
+    "stress",
+    "cohort",
+    "explanation",
+    "challenge",
+    "verify",
+}
+REAL_ENGINES = PRODUCTION_ENGINES.copy()
 
 # stage name -> (mock file, "module:function" for the real engine)
 STAGES = {
@@ -83,6 +100,7 @@ def merge_plans(plans, montecarlo, stress, keep_return):
             "breaking_combo": st["breaking_combo"],
             "breaking_probability": st["breaking_probability"],
             "shortfall_if_hit": st["shortfall_if_hit"],
+            "combos_tested": st["combos_tested"],
         })
         merged.append(row)
     return merged
@@ -233,6 +251,37 @@ def run_engines(customer_id, extra_monthly_savings=0):
     }
 
 
+def get_customer_profile(customer_id):
+    """Lightweight retrieval of a customer's basic demographics and financial profile.
+    
+    This function runs only the absolute minimum required stages to derive net worth 
+    and expenses, completely bypassing LLMs, Monte Carlo, and Challenger logic.
+    It intentionally scrubs sensitive raw transactions and model parameters.
+    """
+    try:
+        customer = run("customer", customer_id)
+    except FileNotFoundError:
+        raise ValueError(f"Customer {customer_id} not found")
+
+    profile = run("profile", customer)
+    
+    return {
+        "customer_id": customer.get("customer_id", customer_id),
+        "customer_name": customer["name"],
+        "age": customer.get("age"),
+        "dependents": customer.get("dependents", 0),
+        "employment_type": customer.get("employment_type"),
+        "city_tier": customer.get("city_tier"),
+        "monthly_income": profile.get("monthly_income"),
+        "monthly_expense": profile.get("monthly_expense"),
+        "monthly_surplus": profile.get("monthly_surplus"),
+        "net_worth": profile.get("net_worth"),
+        "emergency_fund_months": profile.get("emergency_fund_months"),
+        "stated_risk": customer.get("stated_risk"),
+        "goals": customer.get("goals", [])
+    }
+
+
 def run_stages(customer_id, extra_monthly_savings=0):
     """run_engines plus the agent stages, which read only the bundle.
 
@@ -241,8 +290,34 @@ def run_stages(customer_id, extra_monthly_savings=0):
     on a live demo.
     """
     s = run_engines(customer_id, extra_monthly_savings)
-    s["explanation"] = run("explanation", s["bundle"])
-    s["verify"] = run("verify", s["explanation"], s["bundle"])
+    
+    max_attempts = 3
+    previous_failures = None
+    
+    for attempt in range(max_attempts):
+        try:
+            if previous_failures:
+                s["explanation"] = run("explanation", s["bundle"], previous_failures)
+            else:
+                s["explanation"] = run("explanation", s["bundle"])
+        except (groq.GroqError, ValueError) as e:
+            previous_failures = [f"API Generation Error: {str(e)}"]
+            continue
+            
+        s["verify"] = run("verify", s["explanation"], s["bundle"])
+        
+        if s["verify"]["status"] == "pass":
+            break
+            
+        # Collect failures for next attempt
+        previous_failures = s["verify"].get("unverified_numbers", []) + s["verify"].get("suitability_flags", [])
+        if not previous_failures:
+            previous_failures = ["The previous response failed structural or numeric verification."]
+    else:
+        from agents.explanation import fallback_explain
+        s["explanation"] = fallback_explain(s["bundle"])
+        s["verify"] = run("verify", s["explanation"], s["bundle"])
+        
     return s
 
 
@@ -263,6 +338,37 @@ def make_challenge(customer_id, chosen_plan_id):
         raise ValueError(f"Invalid chosen_plan_id: {chosen_plan_id}")
         
     challenge = run("challenge", s["bundle"], s["explanation"], s["verify"], chosen_plan_id)
+
+    # A mock ignores its arguments, so a challenge stage running on its mock hands
+    # back the same canned plan every time - the caller asks about B and gets an
+    # argument against C. That has to be loud: the screen cannot tell a wrong-plan
+    # challenge from a right one, and a plausible argument about the wrong plan is
+    # worse than no argument at all.
+    returned = challenge.get("chosen_plan_id")
+    if returned != chosen_plan_id:
+        raise ValueError(
+            f"challenge stage answered about plan {returned} when asked about "
+            f"{chosen_plan_id}. The stage is running on its mock - check that "
+            f"'challenge' is in PRODUCTION_ENGINES and restart the server."
+        )
+
+    # The plan-id check above misses the worse case. Asked about plan C, the mock
+    # returns plan C, the ids agree, and C001's 52,000 lands on C003's screen with
+    # nothing to show it is the wrong customer's money. So the numbers have to
+    # belong to this customer's bundle. The challenge agent checks this on its own
+    # output, but that check does not run when the stage is a mock - and a mock is
+    # exactly when the numbers come from someone else.
+    allowed = extract_numbers_with_paths(s["bundle"])
+    for num in challenge.get("numbers_used", []):
+        if not any(math.isclose(float(num), a, rel_tol=1e-5, abs_tol=1e-5)
+                   for a in allowed):
+            raise ValueError(
+                f"challenge cites {num}, which is not in this customer's numbers. "
+                f"The stage is running on its mock, so it is quoting another "
+                f"customer - check that 'challenge' is in PRODUCTION_ENGINES and "
+                f"restart the server."
+            )
+
     return build_response(s["customer"], s["profile"], s["risk"], s["plans"],
                           s["montecarlo"], s["stress"], s["explanation"],
                           s["cohort"], s["verify"], challenge=challenge)

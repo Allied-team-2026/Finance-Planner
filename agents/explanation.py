@@ -408,7 +408,7 @@ def build_explanation_payload(bundle):
 
 from agents.numeric import extract_numbers_with_paths, validate_prose_numbers
 
-def explain(bundle):
+def explain(bundle, previous_failures=None):
     """Section 8. Turn plan_bundle into readable plan text.
     
     Called by the orchestrator as `agents.explanation:explain`.
@@ -463,6 +463,10 @@ Do not calculate percentages from decimals, simulation counts from probabilities
 Never identify the customer.
 In the "numbers_used" array, list ONLY the exact numbers you actually cited in your explanation text. Do not list every number from the payload. Do not put structural labels such as 10th percentile, 90th percentile, p10, or p90 into numbers_used.
 """
+
+    if previous_failures:
+        failure_msgs = "\n".join(f"- {f}" for f in previous_failures)
+        system_prompt += f"\n\nCRITICAL RETRY FEEDBACK:\nYour previous response failed verification due to the following issues:\n{failure_msgs}\n\nYou MUST correct these issues. Do NOT repeat the invalid claims. Use the authoritative bundle exactly and do not invent new values."
 
     model_name = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
     
@@ -577,3 +581,56 @@ In the "numbers_used" array, list ONLY the exact numbers you actually cited in y
     validate_prose_numbers(result["mismatch_note"], numbers_map)
             
     return result
+
+def fallback_explain(bundle):
+    """
+    Deterministic fallback when the LLM Explanation fails verification 3 times.
+    Uses only authoritative bundle numbers and strict templates.
+    """
+    plans_text = []
+    numbers_used = set()
+    
+    for plan in bundle.get("plans", []):
+        pid = plan["plan_id"]
+        inv = plan["monthly_investment"]
+        eq = plan["allocation"]["equity"]
+        dt = plan["allocation"]["debt"]
+        succ = plan["success_probability"]
+        corpus = plan["projected_corpus"]
+        
+        eq_pct_str = _as_percent(eq)
+        dt_pct_str = _as_percent(dt)
+        succ_pct_str = _as_percent(succ)
+        
+        body = (f"This plan requires a monthly investment of {inv:,}. "
+                f"It allocates {eq_pct_str} to equity and {dt_pct_str} to debt. "
+                f"The projected corpus is {corpus:,}. "
+                f"Under the simulated return scenarios, this plan reaches the goal in {succ_pct_str} of simulations.")
+                
+        numbers_used.update([inv, eq, dt, corpus, succ])
+        
+        pros = []
+        cons = []
+        if plan.get("survives_stress"):
+            pros.append("Survived the configured stress-test scenarios.")
+        else:
+            shortfall = plan.get("shortfall_if_hit", 0)
+            cons.append(f"Failed the configured stress-test scenario; shortfall if the breaking combination occurs: {shortfall:,}.")
+            numbers_used.add(shortfall)
+            
+        plans_text.append({
+            "plan_id": pid,
+            "headline": f"Plan {pid} Strategy",
+            "body": body,
+            "pros": pros,
+            "cons": cons
+        })
+        
+    return {
+        "plans_text": plans_text,
+        "goal_priority_note": "Your goals have been prioritized based on their target dates.",
+        "mismatch_note": "Your stated risk profile was compared to your revealed transaction history.",
+        "peer_cohort_note": "Your risk profile was compared to the choices of a similar peer cohort.",
+        "numbers_used": sorted(list(numbers_used))
+    }
+
