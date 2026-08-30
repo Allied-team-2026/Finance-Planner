@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { fetchCustomerProfile } from '../services/api'
 
 function formatINR(amount) {
-  if (amount == null || isNaN(amount) || amount === '') return '₹0'
+  if (amount == null || isNaN(amount) || amount === '') return '—'
   return `₹${Math.round(Number(amount)).toLocaleString('en-IN')}`
 }
 
@@ -39,7 +39,9 @@ export default function OnboardingFlow({ onComplete, onCancel }) {
 
   const formData = profiles[selectedCustomerId]
   
-  const calculatedSurplus = formData ? (formData.monthly_surplus || 0) : 0;
+  // The backend reports the surplus. Defaulting a missing one to 0 would show a
+  // confident "+₹0 surplus" in green, which reads as a real answer.
+  const calculatedSurplus = formData ? formData.monthly_surplus : null;
   const goals = formData ? (formData.goals || []) : [];
 
   const handleFinalSubmit = () => {
@@ -178,7 +180,7 @@ export default function OnboardingFlow({ onComplete, onCancel }) {
                 Review Your Profile &amp; Goals
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Confirm your parameters before initiating the 10,000 Monte Carlo simulations and adverse stress testing.
+                Confirm your parameters before the Monte Carlo simulations and adverse stress testing run.
               </p>
             </div>
             
@@ -240,8 +242,16 @@ export default function OnboardingFlow({ onComplete, onCancel }) {
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-800/60">
                   <span className="text-slate-400">Monthly Surplus:</span>
-                  <span className={`font-bold ${calculatedSurplus >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {calculatedSurplus < 0
+                  <span className={`font-bold ${
+                    calculatedSurplus == null
+                      ? 'text-slate-400'
+                      : calculatedSurplus >= 0
+                      ? 'text-emerald-400'
+                      : 'text-rose-400'
+                  }`}>
+                    {calculatedSurplus == null
+                      ? '—'
+                      : calculatedSurplus < 0
                       ? `-₹${Math.abs(Math.round(calculatedSurplus)).toLocaleString('en-IN')}`
                       : `+${formatINR(calculatedSurplus)}`}
                   </span>

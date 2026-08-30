@@ -1,5 +1,5 @@
 function formatINR(amount) {
-  if (amount == null) return '₹0'
+  if (amount == null || isNaN(amount)) return '—'
   return `₹${Math.round(amount).toLocaleString('en-IN')}`
 }
 
@@ -27,10 +27,15 @@ export default function CustomerSnapshot({ customerName, context, profile, goals
     monthly_expense,
     monthly_surplus,
     risk_capacity,
+    risk_capacity_reasons,
     emergency_fund_months,
   } = profile
 
-  const savingsRate = Math.round((monthly_surplus / (monthly_income || 1)) * 100)
+  // The savings rate is the peer cohort engine's number, not ours. Recomputing
+  // it here would put a second copy of the same formula in a second place, and
+  // the two would eventually print different values on the same screen.
+  const savingsRate = peerCohort?.customer_savings_rate
+  const peerPercentile = peerCohort?.savings_rate_percentile
 
   return (
     <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-b from-[#111726]/90 via-[#0e1422]/90 to-[#0a0f1a]/90 p-5 shadow-xl backdrop-blur-md">
@@ -39,7 +44,7 @@ export default function CustomerSnapshot({ customerName, context, profile, goals
         {/* Left: Customer Info */}
         <div className="flex items-center gap-3.5">
           <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-cyan-500 font-bold text-white shadow-md shadow-indigo-500/20 text-base">
-            {customerName ? customerName.charAt(0) : 'R'}
+            {customerName ? customerName.charAt(0) : '?'}
             <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-[#111726] bg-emerald-500" />
           </div>
           <div>
@@ -108,8 +113,10 @@ export default function CustomerSnapshot({ customerName, context, profile, goals
           </div>
           <p className="mt-1 text-xl font-extrabold text-emerald-300 tracking-tight">{formatINR(monthly_surplus)}</p>
           <div className="mt-1 flex items-center gap-1 text-[10px] font-medium text-emerald-400/90">
-            <span>{savingsRate}% savings rate</span>
-            {peerCohort && <span className="text-slate-400">&middot; Top {100 - peerCohort.savings_rate_percentile}% peer rank</span>}
+            {savingsRate != null && <span>{Math.round(savingsRate * 100)}% savings rate</span>}
+            {peerPercentile != null && (
+              <span className="text-slate-400">&middot; Top {100 - peerPercentile}% peer rank</span>
+            )}
           </div>
         </div>
 
@@ -117,9 +124,11 @@ export default function CustomerSnapshot({ customerName, context, profile, goals
         <div className="rounded-xl bg-[#0d1322]/80 p-3.5 border border-slate-800 hover:border-slate-700 transition">
           <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Risk Capacity</p>
           <div className="mt-1 flex items-center gap-2">
-            <span className="text-lg font-bold capitalize text-white">{risk_capacity}</span>
+            <span className="text-lg font-bold capitalize text-white">{risk_capacity ?? '—'}</span>
           </div>
-          <p className="mt-1 text-[10px] text-slate-400 truncate">1 Dependent + Active EMI</p>
+          <p className="mt-1 text-[10px] text-slate-400 truncate" title={risk_capacity_reasons?.join(' · ')}>
+            {risk_capacity_reasons?.length ? risk_capacity_reasons.join(' · ') : 'No limiting factors reported'}
+          </p>
         </div>
 
         {/* Emergency Fund */}
@@ -133,7 +142,7 @@ export default function CustomerSnapshot({ customerName, context, profile, goals
             )}
           </div>
           <p className="mt-1 text-lg font-bold text-white tracking-tight">
-            {emergency_fund_months} <span className="text-sm font-normal text-slate-400">{emergency_fund_months === 1 ? 'month' : 'months'}</span>
+            {emergency_fund_months ?? '—'} <span className="text-sm font-normal text-slate-400">{emergency_fund_months === 1 ? 'month' : 'months'}</span>
           </p>
           <p className="mt-1 text-[10px] text-amber-400">Target: 3–6 months buffer</p>
         </div>
@@ -141,7 +150,9 @@ export default function CustomerSnapshot({ customerName, context, profile, goals
         {/* Horizon & Benchmark */}
         <div className="rounded-xl bg-[#0d1322]/80 p-3.5 border border-slate-800 hover:border-slate-700 transition">
           <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Planning Horizon</p>
-          <p className="mt-1 text-lg font-bold text-white tracking-tight">{primaryGoal ? primaryGoal.years : 5} Years</p>
+          <p className="mt-1 text-lg font-bold text-white tracking-tight">
+            {primaryGoal?.years == null ? '—' : `${primaryGoal.years} Years`}
+          </p>
           <p className="mt-1 text-[10px] text-slate-400 truncate">
             {peerCohort ? `Matched vs ${peerCohort.cohort_size} peers` : 'Goal-weighted horizon'}
           </p>

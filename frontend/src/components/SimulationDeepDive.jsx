@@ -11,11 +11,11 @@ import {
 } from 'recharts'
 
 function formatLakhs(val) {
-  if (val == null) return ''
+  if (val == null || isNaN(val)) return '—'
   return `₹${(val / 100000).toFixed(1)}L`
 }
 
-function CustomTooltip({ active, payload, label }) {
+function CustomTooltip({ active, payload, label, goalAmount }) {
   if (active && payload && payload.length) {
     return (
       <div className="rounded-xl border border-slate-700 bg-slate-900/95 p-3.5 shadow-xl backdrop-blur-md text-xs">
@@ -26,12 +26,16 @@ function CustomTooltip({ active, payload, label }) {
               <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: entry.color }} />
               {entry.name}:
             </span>
-            <span className="font-semibold text-white">₹{entry.value.toLocaleString('en-IN')}</span>
+            <span className="font-semibold text-white">
+              {entry.value == null ? '—' : `₹${entry.value.toLocaleString('en-IN')}`}
+            </span>
           </div>
         ))}
         <div className="mt-2 pt-2 border-t border-slate-800 flex justify-between text-[11px] text-slate-400">
           <span>Goal Target:</span>
-          <span className="font-medium text-emerald-400">₹25,00,000</span>
+          <span className="font-medium text-emerald-400">
+            {goalAmount == null ? '—' : `₹${goalAmount.toLocaleString('en-IN')}`}
+          </span>
         </div>
       </div>
     )
@@ -39,7 +43,7 @@ function CustomTooltip({ active, payload, label }) {
   return null
 }
 
-export default function SimulationDeepDive({ plans, goalAmount }) {
+export default function SimulationDeepDive({ plans, goalAmount, nSimulations }) {
   const [isOpen, setIsOpen] = useState(false)
 
   if (!plans || plans.length === 0) return null
@@ -68,7 +72,7 @@ export default function SimulationDeepDive({ plans, goalAmount }) {
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-white">Monte Carlo Simulation Distribution</h3>
               <span className="rounded bg-indigo-500/10 px-2 py-0.5 text-[10px] font-semibold text-indigo-400 border border-indigo-500/20">
-                10,000 Historical Runs
+                {nSimulations == null ? 'Historical runs' : `${nSimulations.toLocaleString('en-IN')} historical runs`}
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
@@ -112,21 +116,23 @@ export default function SimulationDeepDive({ plans, goalAmount }) {
                   tick={{ fill: '#94a3b8', fontSize: 11 }}
                   axisLine={{ stroke: '#334155' }}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip goalAmount={goalAmount} />} />
                 <Legend
                   wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
                 />
-                <ReferenceLine
-                  y={goalAmount || 2500000}
-                  stroke="#10b981"
-                  strokeDasharray="4 4"
-                  label={{
-                    value: `Goal Target: ${formatLakhs(goalAmount || 2500000)}`,
-                    fill: '#10b981',
-                    fontSize: 11,
-                    position: 'top',
-                  }}
-                />
+                {goalAmount != null && (
+                  <ReferenceLine
+                    y={goalAmount}
+                    stroke="#10b981"
+                    strokeDasharray="4 4"
+                    label={{
+                      value: `Goal Target: ${formatLakhs(goalAmount)}`,
+                      fill: '#10b981',
+                      fontSize: 11,
+                      position: 'top',
+                    }}
+                  />
+                )}
                 <Bar
                   dataKey="10th Percentile Outcome (P10)"
                   fill="#64748b"
@@ -146,16 +152,21 @@ export default function SimulationDeepDive({ plans, goalAmount }) {
             </ResponsiveContainer>
           </div>
 
+          {/* One line per plan, generated from that plan's own numbers. The old
+              version had this text hardcoded, so it described plan A of customer
+              C001 no matter whose screen it was. */}
           <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-slate-400 bg-slate-950/40 p-3 rounded-xl border border-slate-800/80">
-            <div>
-              <strong className="text-white">Plan A (Steady):</strong> Reaches ₹21.5L in the 10th percentile outcome (P10). Narrowest gap to goal under adverse market scenarios.
-            </div>
-            <div>
-              <strong className="text-white">Plan B (Balanced):</strong> Reaches ₹17.8L in the 10th percentile outcome (P10) (₹7.2L gap to goal).
-            </div>
-            <div>
-              <strong className="text-rose-400">Plan C (Growth):</strong> Highest median (₹46.9L), but requires ₹52k/mo (₹7k deficit) and exceeds Moderate Risk Capacity.
-            </div>
+            {plans.map((p) => (
+              <div key={p.plan_id}>
+                <strong className={p.feasible ? 'text-white' : 'text-rose-400'}>
+                  Plan {p.plan_id} ({p.label}):
+                </strong>{' '}
+                worst case (P10) {formatLakhs(p.p10_corpus)}, median {formatLakhs(p.median_corpus)}.
+                {p.p10_gap_to_goal > 0 && ` ${formatLakhs(p.p10_gap_to_goal)} short of the goal at P10.`}
+                {!p.feasible && ' Not affordable on your current surplus.'}
+                {p.exceeds_risk_ceiling && ' Above your risk level.'}
+              </div>
+            ))}
           </div>
         </div>
       )}

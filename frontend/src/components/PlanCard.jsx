@@ -1,18 +1,21 @@
 function formatINR(amount) {
-  if (amount == null || isNaN(amount)) return '₹0'
+  if (amount == null || isNaN(amount)) return '—'
   return `₹${Math.round(Number(amount)).toLocaleString('en-IN')}`
 }
 
 function formatPercent(decimal) {
-  if (decimal == null || isNaN(decimal)) return '0%'
+  if (decimal == null || isNaN(decimal)) return '—'
   return `${Math.round(Number(decimal) * 100)}%`
 }
 
 function CircularProgress({ probability, statusTheme }) {
-  const pct = Math.round((probability || 0) * 100)
+  // The ring is drawn empty when there is no probability, but the label still
+  // says "—". A "0%" here would read as a computed answer instead of a gap.
+  const hasProbability = probability != null && !isNaN(probability)
+  const pct = hasProbability ? Math.round(Number(probability) * 100) : null
   const radius = 34
   const circumference = 2 * Math.PI * radius
-  const strokeDashoffset = circumference - ((probability || 0) * circumference)
+  const strokeDashoffset = circumference - ((hasProbability ? Number(probability) : 0) * circumference)
 
   let strokeColor = '#10b981' // emerald (positive)
   const trackColor = '#1e293b'
@@ -54,13 +57,15 @@ function CircularProgress({ probability, statusTheme }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className={`text-2xl font-extrabold tracking-tight ${textColor}`}>{pct}%</span>
+        <span className={`text-2xl font-extrabold tracking-tight ${textColor}`}>
+          {pct == null ? '—' : `${pct}%`}
+        </span>
       </div>
     </div>
   )
 }
 
-export default function PlanCard({ plan, monthlySurplus = 45000, isSelected, onSelect, onViewDetails }) {
+export default function PlanCard({ plan, isSelected, onSelect, onViewDetails, nSimulations }) {
   const {
     plan_id,
     label,
@@ -77,35 +82,44 @@ export default function PlanCard({ plan, monthlySurplus = 45000, isSelected, onS
     surplus_after_investment,
   } = plan
 
-  const surplusAfter = surplus_after_investment !== undefined
-    ? surplus_after_investment
-    : (monthlySurplus - monthly_investment)
+  // Every number below comes from the backend. Nothing is guessed: a missing
+  // field shows a dash, because a wrong number is worse than a visible gap.
+  const surplusAfter = surplus_after_investment
+  const equityPct = allocation ? Math.round(allocation.equity * 100) : null
+  const debtPct = equityPct == null ? null : 100 - equityPct
+  const simCount = successful_simulations
+  const probText = success_probability == null ? '—' : formatPercent(success_probability)
 
-  const equityPct = allocation ? Math.round(allocation.equity * 100) : 40
-  const debtPct = 100 - equityPct
-  const simCount = successful_simulations || Math.round((success_probability || 0.87) * 10000)
+  // One source of truth for colour and wording, so they can never disagree.
+  // Red is reserved for "you cannot afford this". A plan that is affordable is
+  // never red, however else it is flagged.
+  const status = !feasible
+    ? {
+        theme: 'unsuitable',
+        tag: 'NOT AFFORDABLE',
+        desc: 'Costs more each month than your surplus allows.',
+      }
+    : exceeds_risk_ceiling
+    ? {
+        theme: 'warning',
+        tag: 'ABOVE YOUR RISK LEVEL',
+        desc: 'Affordable, but holds more equity than your risk profile supports.',
+      }
+    : !survives_stress
+    ? {
+        theme: 'warning',
+        tag: 'STRESS VULNERABLE',
+        desc: 'Affordable, but fails under a combination of shocks.',
+      }
+    : {
+        theme: 'resilient',
+        tag: 'STRESS-RESILIENT',
+        desc: 'Affordable and survives the tested shocks.',
+      }
 
-  // Determine Status Theme
-  let statusTheme = 'resilient'
-  if (!feasible || exceeds_risk_ceiling) {
-    statusTheme = 'unsuitable'
-  } else if (!survives_stress) {
-    statusTheme = 'warning'
-  }
-
-  // Dynamic Decision Signal derived from plan fields
-  let signalTag = ''
-  let signalDesc = ''
-  if (feasible && survives_stress) {
-    signalTag = 'STRESS-RESILIENT'
-    signalDesc = 'Affordable and survives tested shocks.'
-  } else if (feasible && !survives_stress) {
-    signalTag = 'STRESS VULNERABLE'
-    signalDesc = 'Affordable, but fails under a combination of shocks.'
-  } else {
-    signalTag = 'NOT AFFORDABLE'
-    signalDesc = 'Requires more monthly cash flow than currently available.'
-  }
+  const statusTheme = status.theme
+  const signalTag = status.tag
+  const signalDesc = status.desc
 
   // Refined card container styles: dark navy dominant, subtle selected state
   const cardBorderClass = isSelected
@@ -150,8 +164,8 @@ export default function PlanCard({ plan, monthlySurplus = 45000, isSelected, onS
               {signalTag}
             </span>
             {exceeds_risk_ceiling && (
-              <span className="text-[10px] font-bold text-rose-400 bg-rose-950/40 px-1.5 py-0.5 rounded border border-rose-800/40">
-                Risk Ceiling Violated
+              <span className="text-[10px] font-bold text-amber-400 bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-800/40">
+                Above risk ceiling
               </span>
             )}
           </div>
@@ -167,27 +181,41 @@ export default function PlanCard({ plan, monthlySurplus = 45000, isSelected, onS
           </p>
           <CircularProgress probability={success_probability} statusTheme={statusTheme} />
           <p className="mt-1 text-xs text-slate-400 font-normal text-center">
-            <span className="text-slate-300 font-medium">{simCount.toLocaleString('en-IN')}</span> / 10,000 simulations
+            <span className="text-slate-300 font-medium">
+              {simCount == null ? '—' : simCount.toLocaleString('en-IN')}
+            </span>
+            {nSimulations == null
+              ? ' runs reached the goal'
+              : ` / ${nSimulations.toLocaleString('en-IN')} simulations`}
           </p>
 
-          {/* Paired Decision Context */}
+          {/* Paired Decision Context - every figure read from the plan */}
           <div className="mt-2.5 pt-2 border-t border-slate-800/80 w-full text-center">
             {statusTheme === 'resilient' && (
               <p className="text-[11px] font-medium text-emerald-400">
-                ✓ 87% success &middot; ₹10k monthly buffer &middot; survives stress
+                ✓ {probText} success &middot; {formatINR(surplusAfter)} monthly buffer &middot; survives stress
               </p>
             )}
             {statusTheme === 'warning' && (
               <p className="text-[11px] font-medium text-amber-400">
-                ⚠ 71% success &middot; fails under combined adverse shocks
+                {exceeds_risk_ceiling
+                  ? `⚠ ${probText} success · ${equityPct == null ? '—' : equityPct + '%'} equity is above your risk level`
+                  : `⚠ ${probText} success · fails under combined adverse shocks`}
               </p>
             )}
             {statusTheme === 'unsuitable' && (
               <div className="text-[11px] font-semibold text-rose-400 space-y-0.5">
-                <p>✕ 95% simulated success, but NOT affordable</p>
+                <p>
+                  ✕ {probText} simulated success, but NOT affordable
+                </p>
+                {surplusAfter != null && surplusAfter < 0 && (
+                  <p className="text-rose-300 text-[10px] font-normal">
+                    Short by {formatINR(Math.abs(surplusAfter))} every month
+                  </p>
+                )}
                 {exceeds_risk_ceiling && (
                   <p className="text-rose-300 text-[10px] font-normal">
-                    ⚠ Exceeds moderate risk ceiling (85% equity)
+                    ⚠ Also above your risk level at {equityPct == null ? '—' : equityPct + '%'} equity
                   </p>
                 )}
               </div>
@@ -206,22 +234,28 @@ export default function PlanCard({ plan, monthlySurplus = 45000, isSelected, onS
 
           {/* Monthly Surplus Left */}
           <div className={`rounded-xl p-2.5 border ${
-            surplusAfter < 0
+            surplusAfter != null && surplusAfter < 0
               ? 'bg-rose-950/20 border-rose-500/40'
               : 'bg-[#090e1a] border-slate-800'
           }`}>
             <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">Monthly surplus left</p>
             <p className={`mt-1 text-base font-bold ${
-              surplusAfter < 0 ? 'text-rose-400' : 'text-emerald-400'
+              surplusAfter == null
+                ? 'text-slate-400'
+                : surplusAfter < 0 ? 'text-rose-400' : 'text-emerald-400'
             }`}>
-              {surplusAfter < 0
+              {surplusAfter == null
+                ? '—'
+                : surplusAfter < 0
                 ? `-₹${Math.abs(Math.round(surplusAfter)).toLocaleString('en-IN')} / mo`
                 : `+₹${Math.round(surplusAfter).toLocaleString('en-IN')} / mo`}
             </p>
             <p className={`mt-0.5 text-[10px] font-semibold ${
-              surplusAfter < 0 ? 'text-rose-400' : 'text-slate-400 font-normal'
+              surplusAfter != null && surplusAfter < 0 ? 'text-rose-400' : 'text-slate-400 font-normal'
             }`}>
-              {surplusAfter < 0 ? 'Not Affordable' : 'Buffer remaining'}
+              {surplusAfter == null
+                ? 'Not reported'
+                : surplusAfter < 0 ? 'Not Affordable' : 'Buffer remaining'}
             </p>
           </div>
 
@@ -230,7 +264,7 @@ export default function PlanCard({ plan, monthlySurplus = 45000, isSelected, onS
             <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">Projected corpus</p>
             <p className="mt-1 text-base font-bold text-white">{formatINR(projected_corpus)}</p>
             <p className="mt-0.5 text-[10px] text-slate-400">
-              Target: {formatINR(goal_amount || 2500000)}
+              Target: {formatINR(goal_amount)}
             </p>
           </div>
 
@@ -238,7 +272,9 @@ export default function PlanCard({ plan, monthlySurplus = 45000, isSelected, onS
           <div className="rounded-xl bg-[#090e1a] p-2.5 border border-slate-800">
             <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">Expected return</p>
             <p className="mt-1 text-base font-bold text-white">{formatPercent(expected_annual_return)} p.a.</p>
-            <p className="mt-0.5 text-[10px] text-slate-400">Compounded 5y</p>
+            <p className="mt-0.5 text-[10px] text-slate-400">
+              {plan.years == null ? 'Compounded' : `Compounded ${plan.years}y`}
+            </p>
           </div>
         </div>
 
@@ -247,16 +283,16 @@ export default function PlanCard({ plan, monthlySurplus = 45000, isSelected, onS
           <div className="flex justify-between text-xs text-slate-300 font-medium mb-1.5">
             <span className="flex items-center gap-1 text-[11px]">
               <span className="h-2 w-2 rounded-full bg-cyan-400" />
-              Equity {equityPct}%
+              Equity {equityPct == null ? '—' : `${equityPct}%`}
             </span>
             <span className="flex items-center gap-1 text-[11px]">
               <span className="h-2 w-2 rounded-full bg-indigo-400" />
-              Debt {debtPct}%
+              Debt {debtPct == null ? '—' : `${debtPct}%`}
             </span>
           </div>
           <div className="w-full h-1.5 rounded-full overflow-hidden flex bg-slate-800">
-            <div className="bg-cyan-500 h-full" style={{ width: `${equityPct}%` }} />
-            <div className="bg-indigo-500 h-full" style={{ width: `${debtPct}%` }} />
+            <div className="bg-cyan-500 h-full" style={{ width: `${equityPct ?? 0}%` }} />
+            <div className="bg-indigo-500 h-full" style={{ width: `${debtPct ?? 0}%` }} />
           </div>
         </div>
 

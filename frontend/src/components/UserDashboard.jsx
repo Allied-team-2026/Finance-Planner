@@ -1,16 +1,17 @@
 function formatINR(amount) {
-  if (amount == null || isNaN(amount)) return '₹0'
+  if (amount == null || isNaN(amount)) return '—'
   return `₹${Math.round(Number(amount)).toLocaleString('en-IN')}`
 }
 
 export default function UserDashboard({
   customerName = 'Customer',
-  customerId = 'C001',
+  customerId,
   profile = {},
   goals = [],
   plans = [],
   selectedPlanId = 'A',
   generatedAt,
+  nSimulations,
   pastAnalyses = [],
   onViewLatestAnalysis,
   onStartNewAnalysis,
@@ -85,7 +86,7 @@ export default function UserDashboard({
         <div className="rounded-2xl border border-slate-800 bg-[#0d1322]/90 p-4 backdrop-blur-md">
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Risk Capacity</p>
           <p className="mt-1.5 text-lg font-extrabold text-indigo-300 capitalize tracking-tight">
-            {profile.risk_capacity || 'Moderate'}
+            {profile.risk_capacity ?? '—'}
           </p>
           <p className="mt-0.5 text-[11px] text-slate-400">Financial loss ability</p>
         </div>
@@ -94,10 +95,12 @@ export default function UserDashboard({
         <div className="col-span-2 sm:col-span-1 rounded-2xl border border-slate-800 bg-[#0d1322]/90 p-4 backdrop-blur-md">
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Primary Goal</p>
           <p className="mt-1.5 text-sm font-bold text-white capitalize truncate">
-            {primaryGoal ? primaryGoal.name.replace(/_/g, ' ') : 'Downpayment'}
+            {primaryGoal ? primaryGoal.name.replace(/_/g, ' ') : '—'}
           </p>
           <p className="mt-0.5 text-[11px] text-slate-400">
-            {primaryGoal ? `${formatINR(primaryGoal.target_amount)} in ${primaryGoal.years}y` : '₹25,00,000 in 5y'}
+            {primaryGoal
+              ? `${formatINR(primaryGoal.target_amount)}${primaryGoal.years == null ? '' : ` in ${primaryGoal.years}y`}`
+              : 'No goal reported'}
           </p>
         </div>
       </div>
@@ -156,10 +159,14 @@ export default function UserDashboard({
             <div className="rounded-xl bg-[#080d18]/80 p-4 border border-slate-800">
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Goal Success Probability</p>
               <p className="mt-1 text-base font-bold text-emerald-400">
-                {Math.round(activePlan.success_probability * 100)}%
+                {activePlan.success_probability == null
+                  ? '—'
+                  : `${Math.round(activePlan.success_probability * 100)}%`}
               </p>
               <p className="mt-0.5 text-xs text-slate-400">
-                Across 10,000 Monte Carlo runs
+                {nSimulations == null
+                  ? 'Across the simulation runs'
+                  : `Across ${nSimulations.toLocaleString('en-IN')} Monte Carlo runs`}
               </p>
             </div>
 
@@ -170,7 +177,9 @@ export default function UserDashboard({
                 {activePlan.feasible ? '✓ Affordable' : '✕ Deficit'}
               </p>
               <p className="mt-0.5 text-xs text-slate-400">
-                {activePlan.surplus_after_investment >= 0
+                {activePlan.surplus_after_investment == null
+                  ? 'Buffer not reported'
+                  : activePlan.surplus_after_investment >= 0
                   ? `+${formatINR(activePlan.surplus_after_investment)} / mo surplus buffer`
                   : `${formatINR(activePlan.surplus_after_investment)} / mo deficit`}
               </p>
@@ -180,10 +189,12 @@ export default function UserDashboard({
             <div className="rounded-xl bg-[#080d18]/80 p-4 border border-slate-800">
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Stress Resilience</p>
               <p className={`mt-1 text-base font-bold ${activePlan.survives_stress ? 'text-emerald-400' : 'text-amber-400'}`}>
-                {activePlan.survives_stress ? '✓ Survives All Shocks' : '⚠ Fails Under Stress'}
+                {activePlan.survives_stress ? '✓ Survives all shocks' : '⚠ Fails under stress'}
               </p>
               <p className="mt-0.5 text-xs text-slate-400">
-                165 shock combinations tested
+                {activePlan.combos_tested == null
+                  ? 'Shock combinations tested'
+                  : `${activePlan.combos_tested} shock combinations tested`}
               </p>
             </div>
           </div>

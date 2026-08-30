@@ -17,7 +17,9 @@ export default function WelcomeScreen({ onNewUser, onExistingUser, onEnterDemoMo
     }
     setSignInError(null)
     setShowSignInModal(false)
-    onExistingUser(customerIdInput.trim(), customerNameInput.trim() || 'Existing Customer')
+    // Only the id is sent. The backend owns the name, so the typed name is not
+    // passed on: if it were, the sign-in screen and the plan would disagree.
+    onExistingUser(customerIdInput.trim())
   }
 
   return (

@@ -4,8 +4,8 @@ import PlanDetailsModal from './PlanDetailsModal'
 
 export default function PlanComparison({
   plans = [],
-  monthlySurplus,
   goalPriorityNote,
+  nSimulations,
   selectedPlanId: propSelectedPlanId,
   onSelectPlan,
 }) {
@@ -38,7 +38,9 @@ export default function PlanComparison({
               Decision Intelligence Engine
             </span>
             <span className="text-xs text-slate-400">
-              Validated against 10,000 simulations
+              {nSimulations == null
+                ? 'Validated against simulation'
+                : `Validated against ${nSimulations.toLocaleString('en-IN')} simulations`}
             </span>
           </div>
 
@@ -70,10 +72,10 @@ export default function PlanComparison({
           <PlanCard
             key={plan.plan_id}
             plan={plan}
-            monthlySurplus={monthlySurplus}
             isSelected={selectedPlanId === plan.plan_id}
             onSelect={() => handleSelectPlan(plan.plan_id)}
             onViewDetails={(p) => setInspectingPlan(p)}
+            nSimulations={nSimulations}
           />
         ))}
       </div>
@@ -153,7 +155,6 @@ export default function PlanComparison({
       {inspectingPlan && (
         <PlanDetailsModal
           plan={inspectingPlan}
-          monthlySurplus={monthlySurplus}
           isSelected={selectedPlanId === inspectingPlan.plan_id}
           onClose={() => setInspectingPlan(null)}
           onSelect={() => {

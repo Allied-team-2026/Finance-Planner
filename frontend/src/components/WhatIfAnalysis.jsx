@@ -2,15 +2,20 @@ import { useState } from 'react'
 import { fetchWhatIf } from '../services/api'
 
 function formatINR(amount) {
-  if (amount == null || isNaN(amount)) return '₹0'
+  if (amount == null || isNaN(amount)) return '—'
   return `₹${Math.round(Number(amount)).toLocaleString('en-IN')}`
+}
+
+function formatPercent(decimal) {
+  if (decimal == null || isNaN(decimal)) return '—'
+  return `${Math.round(Number(decimal) * 100)}%`
 }
 
 export default function WhatIfAnalysis({
   plans = [],
   selectedPlanId = 'A',
-  monthlySurplus = 45000,
-  customerId = 'C001',
+  monthlySurplus,
+  customerId,
 }) {
   const [extraSavings, setExtraSavings] = useState(10000)
   const [scenarioResult, setScenarioResult] = useState(null)
@@ -50,19 +55,13 @@ export default function WhatIfAnalysis({
     setError(null)
   }
 
-  // Find scenario plan from returned payload
-  const scenarioPlan = scenarioResult?.plans?.find((p) => p.plan_id === selectedPlan?.plan_id) || selectedPlan
-  const scenarioSurplus = scenarioResult?.profile?.monthly_surplus || monthlySurplus + extraSavings
-  const baselineSurplusAfter = selectedPlan
-    ? (selectedPlan.surplus_after_investment !== undefined
-        ? selectedPlan.surplus_after_investment
-        : monthlySurplus - selectedPlan.monthly_investment)
-    : 0
-  const scenarioSurplusAfter = scenarioPlan
-    ? (scenarioPlan.surplus_after_investment !== undefined
-        ? scenarioPlan.surplus_after_investment
-        : scenarioSurplus - scenarioPlan.monthly_investment)
-    : 0
+  // The scenario numbers are whatever the backend returned for the scenario.
+  // This screen does no arithmetic of its own: the same pipeline that produced
+  // the baseline produced this, so the two columns are comparable by construction.
+  const scenarioPlan = scenarioResult?.plans?.find((p) => p.plan_id === selectedPlan?.plan_id)
+  const scenarioSurplus = scenarioResult?.profile?.monthly_surplus
+  const baselineSurplusAfter = selectedPlan?.surplus_after_investment
+  const scenarioSurplusAfter = scenarioPlan?.surplus_after_investment
 
   return (
     <section id="whatif-section" className="flex flex-col gap-6 scroll-mt-8">
@@ -119,7 +118,7 @@ export default function WhatIfAnalysis({
             <div className="rounded-xl bg-[#090e1a] p-3 border border-slate-800">
               <p className="text-[10px] text-slate-400 uppercase tracking-wider">Success Probability</p>
               <p className="mt-1 text-sm font-bold text-white">
-                {Math.round(selectedPlan.success_probability * 100)}%
+                {formatPercent(selectedPlan.success_probability)}
               </p>
             </div>
 
@@ -145,7 +144,7 @@ export default function WhatIfAnalysis({
       )}
 
       {/* 3. Scenario Controller & Interactive Execution */}
-      {!scenarioResult ? (
+      {!scenarioResult || !scenarioPlan ? (
         <div className="rounded-2xl border border-slate-800 bg-[#0d1322]/90 p-6 shadow-md backdrop-blur-md flex flex-col gap-5">
           <div>
             <label htmlFor="extra-savings-slider" className="block text-xs font-semibold text-white mb-1">
@@ -223,7 +222,7 @@ export default function WhatIfAnalysis({
           {/* Run Action Button */}
           <button
             type="button"
-            disabled={isLoading || !selectedPlan}
+            disabled={isLoading || !selectedPlan || !customerId}
             onClick={handleRunScenario}
             className="w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold text-white shadow-lg shadow-cyan-600/25 transition flex items-center justify-center gap-2 cursor-pointer"
           >
@@ -270,7 +269,7 @@ export default function WhatIfAnalysis({
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   Current Baseline
                 </span>
-                <span className="text-[11px] text-slate-400">₹45k Surplus</span>
+                <span className="text-[11px] text-slate-400">{formatINR(monthlySurplus)} surplus</span>
               </div>
 
               <div className="space-y-2 text-xs">
@@ -284,13 +283,23 @@ export default function WhatIfAnalysis({
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-800/40">
                   <span className="text-slate-400">Surplus Buffer Remaining:</span>
-                  <span className={`font-bold ${baselineSurplusAfter >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {baselineSurplusAfter >= 0 ? `+${formatINR(baselineSurplusAfter)} / mo` : `${formatINR(baselineSurplusAfter)} / mo`}
+                  <span className={`font-bold ${
+                    baselineSurplusAfter == null
+                      ? 'text-slate-400'
+                      : baselineSurplusAfter >= 0
+                      ? 'text-emerald-400'
+                      : 'text-rose-400'
+                  }`}>
+                    {baselineSurplusAfter == null
+                      ? '—'
+                      : baselineSurplusAfter >= 0
+                      ? `+${formatINR(baselineSurplusAfter)} / mo`
+                      : `${formatINR(baselineSurplusAfter)} / mo`}
                   </span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-800/40">
                   <span className="text-slate-400">Success Probability:</span>
-                  <span className="font-semibold text-white">{Math.round(selectedPlan.success_probability * 100)}%</span>
+                  <span className="font-semibold text-white">{formatPercent(selectedPlan.success_probability)}</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-400">Affordability State:</span>
@@ -321,13 +330,23 @@ export default function WhatIfAnalysis({
                 </div>
                 <div className="flex justify-between py-1 border-b border-cyan-500/15">
                   <span className="text-slate-400">Surplus Buffer Remaining:</span>
-                  <span className={`font-bold ${scenarioSurplusAfter >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {scenarioSurplusAfter >= 0 ? `+${formatINR(scenarioSurplusAfter)} / mo` : `${formatINR(scenarioSurplusAfter)} / mo`}
+                  <span className={`font-bold ${
+                    scenarioSurplusAfter == null
+                      ? 'text-slate-400'
+                      : scenarioSurplusAfter >= 0
+                      ? 'text-emerald-400'
+                      : 'text-rose-400'
+                  }`}>
+                    {scenarioSurplusAfter == null
+                      ? '—'
+                      : scenarioSurplusAfter >= 0
+                      ? `+${formatINR(scenarioSurplusAfter)} / mo`
+                      : `${formatINR(scenarioSurplusAfter)} / mo`}
                   </span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-cyan-500/15">
                   <span className="text-slate-400">Success Probability:</span>
-                  <span className="font-semibold text-white">{Math.round(scenarioPlan.success_probability * 100)}%</span>
+                  <span className="font-semibold text-white">{formatPercent(scenarioPlan.success_probability)}</span>
                 </div>
                 <div className="flex justify-between py-1">
                   <span className="text-slate-400">Affordability State:</span>
@@ -355,9 +374,9 @@ export default function WhatIfAnalysis({
               </p>
             ) : (
               <p className="text-slate-300">
-                Your monthly cushion after funding Plan {selectedPlan.plan_id} expands from{' '}
+                Your monthly cushion after funding Plan {selectedPlan.plan_id} changes from{' '}
                 <strong className="text-white">{formatINR(baselineSurplusAfter)}</strong> to{' '}
-                <strong className="text-emerald-400">{formatINR(scenarioSurplusAfter)}</strong>, providing higher tolerance against unexpected lifestyle shocks.
+                <strong className="text-cyan-300">{formatINR(scenarioSurplusAfter)}</strong>.
               </p>
             )}
           </div>

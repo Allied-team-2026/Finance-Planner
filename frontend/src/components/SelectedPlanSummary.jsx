@@ -1,19 +1,18 @@
 import { useState } from 'react'
 
 function formatINR(amount) {
-  if (amount == null || isNaN(amount)) return '₹0'
+  if (amount == null || isNaN(amount)) return '—'
   return `₹${Math.round(Number(amount)).toLocaleString('en-IN')}`
 }
 
 function formatPercent(decimal) {
-  if (decimal == null || isNaN(decimal)) return '0%'
+  if (decimal == null || isNaN(decimal)) return '—'
   return `${Math.round(Number(decimal) * 100)}%`
 }
 
 export default function SelectedPlanSummary({
   plans = [],
   selectedPlanId = 'A',
-  monthlySurplus = 45000,
   goals = [],
   onStartNewAnalysis,
 }) {
@@ -27,11 +26,10 @@ export default function SelectedPlanSummary({
 
   if (!selectedPlan) return null
 
-  const equityPct = selectedPlan.allocation ? Math.round(selectedPlan.allocation.equity * 100) : 40
-  const debtPct = 100 - equityPct
-  const surplusAfter = selectedPlan.surplus_after_investment !== undefined
-    ? selectedPlan.surplus_after_investment
-    : (monthlySurplus - selectedPlan.monthly_investment)
+  // Read, never derive. The backend already worked all of this out.
+  const equityPct = selectedPlan.allocation ? Math.round(selectedPlan.allocation.equity * 100) : null
+  const debtPct = equityPct == null ? null : 100 - equityPct
+  const surplusAfter = selectedPlan.surplus_after_investment
 
   // Dynamic derivation of evidence points for "Why this strategy?"
   const evidencePoints = []
@@ -39,43 +37,45 @@ export default function SelectedPlanSummary({
   if (selectedPlan.feasible) {
     evidencePoints.push({
       status: 'positive',
-      text: `Fits within monthly cash flow surplus (leaves ${formatINR(surplusAfter)} monthly buffer)`,
+      text: `Fits within your monthly surplus and leaves ${formatINR(surplusAfter)} spare each month`,
     })
   } else {
     evidencePoints.push({
       status: 'negative',
-      text: `Requires ${formatINR(Math.abs(surplusAfter))}/month more than your current surplus of ${formatINR(monthlySurplus)}`,
+      text: `Costs ${formatINR(surplusAfter == null ? null : Math.abs(surplusAfter))} a month more than your surplus allows`,
     })
   }
 
   if (selectedPlan.survives_stress) {
     evidencePoints.push({
       status: 'positive',
-      text: 'Survives all 165 tested adverse shock combinations without shortfall',
+      text: 'Survives every tested combination of adverse shocks without a shortfall',
     })
   } else {
     evidencePoints.push({
       status: 'warning',
-      text: 'Fails under combined adverse shocks with a projected cash shortfall',
+      text: selectedPlan.breaking_combo
+        ? `Fails under ${selectedPlan.breaking_combo}`
+        : 'Fails under combined adverse shocks',
     })
   }
 
-  if (selectedPlan.success_probability) {
+  if (selectedPlan.success_probability != null) {
     evidencePoints.push({
       status: 'positive',
-      text: `${Math.round(selectedPlan.success_probability * 100)}% goal success probability across 10,000 Monte Carlo simulations`,
+      text: `${formatPercent(selectedPlan.success_probability)} of simulations reach the goal`,
     })
   }
 
   if (selectedPlan.exceeds_risk_ceiling) {
     evidencePoints.push({
       status: 'negative',
-      text: 'Exceeds moderate risk tolerance ceiling (85% equity exposure)',
+      text: `Holds more equity than your risk profile supports (${equityPct == null ? '—' : equityPct + '%'} equity)`,
     })
-  } else {
+  } else if (equityPct != null) {
     evidencePoints.push({
       status: 'neutral',
-      text: `Asset allocation matches risk profile (${equityPct}% equity / ${debtPct}% debt)`,
+      text: `Allocation matches your risk profile (${equityPct}% equity / ${debtPct}% debt)`,
     })
   }
 
@@ -123,7 +123,8 @@ export default function SelectedPlanSummary({
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Targeting: {primaryGoal ? primaryGoal.name.replace(/_/g, ' ') : 'house downpayment'} ({formatINR(selectedPlan.goal_amount || 2500000)} in {selectedPlan.years || 5} years)
+                Targeting: {primaryGoal ? primaryGoal.name.replace(/_/g, ' ') : '—'} ({formatINR(selectedPlan.goal_amount)}
+                {selectedPlan.years == null ? '' : ` in ${selectedPlan.years} years`})
               </p>
             </div>
           </div>
@@ -163,22 +164,34 @@ export default function SelectedPlanSummary({
 
           {/* Monthly Surplus Remaining */}
           <div className={`rounded-xl p-3 border ${
-            surplusAfter < 0 ? 'bg-rose-950/20 border-rose-500/30' : 'bg-[#090e1a] border-slate-800'
+            surplusAfter != null && surplusAfter < 0 ? 'bg-rose-950/20 border-rose-500/30' : 'bg-[#090e1a] border-slate-800'
           }`}>
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Surplus Left</p>
-            <p className={`mt-1 text-base font-extrabold ${surplusAfter < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
-              {surplusAfter < 0 ? `-₹${Math.abs(Math.round(surplusAfter)).toLocaleString('en-IN')}` : `+${formatINR(surplusAfter)}`}
+            <p className={`mt-1 text-base font-extrabold ${
+              surplusAfter == null ? 'text-slate-400' : surplusAfter < 0 ? 'text-rose-400' : 'text-emerald-400'
+            }`}>
+              {surplusAfter == null
+                ? '—'
+                : surplusAfter < 0
+                ? `-₹${Math.abs(Math.round(surplusAfter)).toLocaleString('en-IN')}`
+                : `+${formatINR(surplusAfter)}`}
             </p>
-            <p className="mt-0.5 text-[11px] text-slate-400">{surplusAfter < 0 ? 'Monthly Deficit' : 'Buffer Remaining'}</p>
+            <p className="mt-0.5 text-[11px] text-slate-400">
+              {surplusAfter == null ? 'Not reported' : surplusAfter < 0 ? 'Monthly Deficit' : 'Buffer Remaining'}
+            </p>
           </div>
 
           {/* Success Probability */}
           <div className="rounded-xl bg-[#090e1a] p-3 border border-slate-800">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Goal Success</p>
             <p className="mt-1 text-base font-extrabold text-white">
-              {Math.round(selectedPlan.success_probability * 100)}%
+              {formatPercent(selectedPlan.success_probability)}
             </p>
-            <p className="mt-0.5 text-[11px] text-slate-400">Across 10k sims</p>
+            <p className="mt-0.5 text-[11px] text-slate-400">
+              {selectedPlan.successful_simulations == null
+                ? 'In simulation'
+                : `${selectedPlan.successful_simulations.toLocaleString('en-IN')} runs reached the goal`}
+            </p>
           </div>
 
           {/* Expected Return */}
@@ -187,14 +200,16 @@ export default function SelectedPlanSummary({
             <p className="mt-1 text-base font-extrabold text-white">
               {formatPercent(selectedPlan.expected_annual_return)} p.a.
             </p>
-            <p className="mt-0.5 text-[11px] text-slate-400">Compounded 5y</p>
+            <p className="mt-0.5 text-[11px] text-slate-400">
+              {selectedPlan.years == null ? 'Compounded' : `Compounded ${selectedPlan.years}y`}
+            </p>
           </div>
 
           {/* Projected Corpus */}
           <div className="rounded-xl bg-[#090e1a] p-3 border border-slate-800">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Projected Corpus</p>
             <p className="mt-1 text-base font-extrabold text-white">{formatINR(selectedPlan.projected_corpus)}</p>
-            <p className="mt-0.5 text-[11px] text-slate-400">Target: {formatINR(selectedPlan.goal_amount || 2500000)}</p>
+            <p className="mt-0.5 text-[11px] text-slate-400">Target: {formatINR(selectedPlan.goal_amount)}</p>
           </div>
 
           {/* Asset Allocation */}
@@ -202,11 +217,12 @@ export default function SelectedPlanSummary({
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Allocation</p>
             <div>
               <p className="text-xs font-bold text-white">
-                <span className="text-cyan-400">{equityPct}% Eq</span> &middot; <span className="text-indigo-400">{debtPct}% Debt</span>
+                <span className="text-cyan-400">{equityPct == null ? '—' : `${equityPct}% Eq`}</span> &middot;{' '}
+                <span className="text-indigo-400">{debtPct == null ? '—' : `${debtPct}% Debt`}</span>
               </p>
               <div className="w-full h-1.5 rounded-full overflow-hidden flex bg-slate-800 mt-1.5">
-                <div className="bg-cyan-500 h-full" style={{ width: `${equityPct}%` }} />
-                <div className="bg-indigo-500 h-full" style={{ width: `${debtPct}%` }} />
+                <div className="bg-cyan-500 h-full" style={{ width: `${equityPct ?? 0}%` }} />
+                <div className="bg-indigo-500 h-full" style={{ width: `${debtPct ?? 0}%` }} />
               </div>
             </div>
           </div>

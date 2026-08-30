@@ -4,7 +4,7 @@ import { OrbitControls, Html, Float } from '@react-three/drei'
 import * as THREE from 'three'
 
 function formatINR(amount) {
-  if (amount == null || isNaN(amount)) return '₹0'
+  if (amount == null || isNaN(amount)) return '—'
   return `₹${Math.round(Number(amount)).toLocaleString('en-IN')}`
 }
 
@@ -302,7 +302,7 @@ function FallbackJourney2D({ profile = {}, goals = [], plans = [], selectedPlanI
           <h4 className="text-sm font-bold text-white mt-0.5">Capital Timeline & Milestone Progression</h4>
         </div>
         <span className="rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-mono text-slate-400 border border-slate-800">
-          Strategy {activePlan?.plan_id || 'A'} Active
+          Strategy {activePlan?.plan_id ?? '—'} Active
         </span>
       </div>
 
@@ -377,7 +377,9 @@ export default function FinancialJourney3D({
 
   const selectedPlan = plans.find((p) => p.plan_id === selectedPlanId) || plans[0]
   const primaryGoal = goals && goals.length > 0 ? goals[0] : null
-  const monthlySurplus = profile.monthly_surplus || 0
+  // Passed straight to formatINR, which shows a dash. Defaulting to 0 here would
+  // print "₹0 / mo surplus" as if the engine had said so.
+  const monthlySurplus = profile.monthly_surplus ?? null
 
   return (
     <section className="flex flex-col gap-5">

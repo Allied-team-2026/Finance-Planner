@@ -5,10 +5,13 @@ export default function RiskMismatchAlert({ risk, mismatchNote, profile }) {
 
   if (!risk || !risk.mismatch) return null
 
-  const confidencePct = Math.round((risk.confidence || 0.82) * 100)
-  const statedRisk = risk.stated || 'Aggressive'
-  const revealedRisk = risk.revealed || 'Moderate'
-  const riskCapacity = profile?.risk_capacity || 'Moderate'
+  // Everything here comes from the backend. No default risk label and no default
+  // confidence: inventing a risk category would be a made-up finding about a real
+  // person, which is worse than an empty box.
+  const confidencePct = risk.confidence == null ? null : Math.round(risk.confidence * 100)
+  const statedRisk = risk.stated ?? '—'
+  const revealedRisk = risk.revealed ?? '—'
+  const riskCapacity = profile?.risk_capacity ?? '—'
   const capacityReasons = profile?.risk_capacity_reasons || []
 
   return (
@@ -33,7 +36,7 @@ export default function RiskMismatchAlert({ risk, mismatchNote, profile }) {
                   Risk profile mismatch detected
                 </h3>
                 <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-amber-300 border border-amber-500/30">
-                  Model confidence: {confidencePct}%
+                  Model confidence: {confidencePct == null ? '—' : `${confidencePct}%`}
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
@@ -118,13 +121,17 @@ export default function RiskMismatchAlert({ risk, mismatchNote, profile }) {
           </div>
         </div>
 
-        {/* Neutral AI Synthesis Statement */}
-        <div className="rounded-xl bg-slate-950/50 p-3 border border-slate-800/80 text-xs text-slate-300 leading-relaxed">
-          <p>
-            <strong className="text-white">Observation: </strong>
-            Your behaviour suggests a more moderate risk profile. {mismatchNote || 'On two occasions you sold equity within days of a market fall. That matters because plans with highest projected returns fall furthest during downturns, where premature exits significantly impair final corpus.'}
-          </p>
-        </div>
+        {/* Neutral AI Synthesis Statement. The wording is the agent's, written
+            for this customer. We do not supply a fallback story, because a story
+            about panic selling that this customer never did is a false finding. */}
+        {mismatchNote && (
+          <div className="rounded-xl bg-slate-950/50 p-3 border border-slate-800/80 text-xs text-slate-300 leading-relaxed">
+            <p>
+              <strong className="text-white">Observation: </strong>
+              {mismatchNote}
+            </p>
+          </div>
+        )}
 
         {/* Expandable Evidence & Risk Capacity Factors */}
         {isExpanded && (

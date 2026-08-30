@@ -1,18 +1,17 @@
 import { useEffect } from 'react'
 
 function formatINR(amount) {
-  if (amount == null || isNaN(amount)) return '₹0'
+  if (amount == null || isNaN(amount)) return '—'
   return `₹${Math.round(Number(amount)).toLocaleString('en-IN')}`
 }
 
 function formatPercent(decimal) {
-  if (decimal == null || isNaN(decimal)) return '0%'
+  if (decimal == null || isNaN(decimal)) return '—'
   return `${Math.round(Number(decimal) * 100)}%`
 }
 
 export default function PlanDetailsModal({
   plan,
-  monthlySurplus = 45000,
   isSelected = false,
   onSelect,
   onChallenge,
@@ -42,7 +41,7 @@ export default function PlanDetailsModal({
     expected_annual_return,
     projected_corpus,
     goal_amount,
-    years = 5,
+    years,
     success_probability,
     successful_simulations,
     feasible,
@@ -51,6 +50,7 @@ export default function PlanDetailsModal({
     shortfall_if_hit,
     exceeds_risk_ceiling,
     surplus_after_investment,
+    combos_tested,
     pros = [],
     cons = [],
     p10_corpus,
@@ -58,13 +58,11 @@ export default function PlanDetailsModal({
     p90_corpus,
   } = plan
 
-  const surplusAfter = surplus_after_investment !== undefined
-    ? surplus_after_investment
-    : (monthlySurplus - monthly_investment)
-
-  const equityPct = allocation ? Math.round(allocation.equity * 100) : 40
-  const debtPct = 100 - equityPct
-  const simCount = successful_simulations || Math.round((success_probability || 0.87) * 10000)
+  // Read only. No fallback numbers: an invented figure in a details panel is the
+  // most convincing kind of wrong.
+  const surplusAfter = surplus_after_investment
+  const equityPct = allocation ? Math.round(allocation.equity * 100) : null
+  const debtPct = equityPct == null ? null : 100 - equityPct
 
   return (
     <div
@@ -124,16 +122,22 @@ export default function PlanDetailsModal({
 
             {/* Monthly Surplus Remaining */}
             <div className={`rounded-xl p-3 border ${
-              surplusAfter < 0 ? 'bg-rose-950/20 border-rose-500/40' : 'bg-[#090e1a] border-slate-800'
+              surplusAfter != null && surplusAfter < 0 ? 'bg-rose-950/20 border-rose-500/40' : 'bg-[#090e1a] border-slate-800'
             }`}>
               <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Monthly Surplus Left</p>
-              <p className={`mt-1 text-base font-extrabold ${surplusAfter < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                {surplusAfter < 0
+              <p className={`mt-1 text-base font-extrabold ${
+                surplusAfter == null ? 'text-slate-400' : surplusAfter < 0 ? 'text-rose-400' : 'text-emerald-400'
+              }`}>
+                {surplusAfter == null
+                  ? '—'
+                  : surplusAfter < 0
                   ? `-₹${Math.abs(Math.round(surplusAfter)).toLocaleString('en-IN')}`
                   : `+${formatINR(surplusAfter)}`}
               </p>
-              <p className={`mt-0.5 text-[11px] ${surplusAfter < 0 ? 'text-rose-400 font-semibold' : 'text-slate-400'}`}>
-                {surplusAfter < 0 ? 'Deficit / Unaffordable' : 'Buffer remaining'}
+              <p className={`mt-0.5 text-[11px] ${
+                surplusAfter != null && surplusAfter < 0 ? 'text-rose-400 font-semibold' : 'text-slate-400'
+              }`}>
+                {surplusAfter == null ? 'Not reported' : surplusAfter < 0 ? 'Deficit / Unaffordable' : 'Buffer remaining'}
               </p>
             </div>
 
@@ -141,9 +145,13 @@ export default function PlanDetailsModal({
             <div className="rounded-xl bg-[#090e1a] p-3 border border-slate-800">
               <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Success Probability</p>
               <p className="mt-1 text-base font-extrabold text-white">
-                {Math.round((success_probability || 0) * 100)}%
+                {formatPercent(success_probability)}
               </p>
-              <p className="mt-0.5 text-[11px] text-slate-400">{simCount.toLocaleString('en-IN')} runs</p>
+              <p className="mt-0.5 text-[11px] text-slate-400">
+                {successful_simulations == null
+                  ? '—'
+                  : `${successful_simulations.toLocaleString('en-IN')} runs reached the goal`}
+              </p>
             </div>
 
             {/* Expected Annual Return */}
@@ -152,7 +160,9 @@ export default function PlanDetailsModal({
               <p className="mt-1 text-base font-extrabold text-white">
                 {formatPercent(expected_annual_return)} p.a.
               </p>
-              <p className="mt-0.5 text-[11px] text-slate-400">Compounded 5y</p>
+              <p className="mt-0.5 text-[11px] text-slate-400">
+                {years == null ? 'Compounded' : `Compounded ${years}y`}
+              </p>
             </div>
           </div>
 
@@ -162,19 +172,19 @@ export default function PlanDetailsModal({
               <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Projected Corpus</p>
               <p className="mt-1 text-sm font-bold text-white">{formatINR(projected_corpus)}</p>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                Target: {formatINR(goal_amount || 2500000)} in {years}y
+                Target: {formatINR(goal_amount)}{years == null ? '' : ` in ${years}y`}
               </p>
             </div>
 
             <div className="rounded-xl bg-[#090e1a] p-3 border border-slate-800">
               <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Asset Allocation</p>
               <div className="mt-1 flex items-center justify-between text-xs font-semibold text-white">
-                <span className="text-cyan-400">{equityPct}% Equity</span>
-                <span className="text-indigo-400">{debtPct}% Debt</span>
+                <span className="text-cyan-400">{equityPct == null ? '—' : `${equityPct}% Equity`}</span>
+                <span className="text-indigo-400">{debtPct == null ? '—' : `${debtPct}% Debt`}</span>
               </div>
               <div className="w-full h-1.5 rounded-full overflow-hidden flex bg-slate-800 mt-1.5">
-                <div className="bg-cyan-500 h-full" style={{ width: `${equityPct}%` }} />
-                <div className="bg-indigo-500 h-full" style={{ width: `${debtPct}%` }} />
+                <div className="bg-cyan-500 h-full" style={{ width: `${equityPct ?? 0}%` }} />
+                <div className="bg-indigo-500 h-full" style={{ width: `${debtPct ?? 0}%` }} />
               </div>
             </div>
 
@@ -189,8 +199,8 @@ export default function PlanDetailsModal({
                 </span>
               </div>
               {exceeds_risk_ceiling && (
-                <span className="text-[10px] text-rose-400 font-medium mt-1">
-                  ⚠ Exceeds moderate risk ceiling
+                <span className="text-[10px] text-amber-400 font-medium mt-1">
+                  ⚠ Above your risk level at {equityPct == null ? '—' : `${equityPct}%`} equity
                 </span>
               )}
             </div>
@@ -253,7 +263,7 @@ export default function PlanDetailsModal({
           {/* Section 3: SIMULATION OUTCOMES */}
           <div className="rounded-xl bg-[#090e1a] p-4 border border-slate-800 space-y-3">
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
-              Simulation Outcomes (10,000 Monte Carlo Runs)
+              Simulation Outcomes
             </h4>
             <div className="grid grid-cols-3 gap-2.5 text-center">
               <div className="bg-slate-950/70 p-2.5 rounded-lg border border-slate-800">
@@ -305,7 +315,10 @@ export default function PlanDetailsModal({
             ) : (
               <div className="rounded-lg bg-emerald-950/20 p-3 border border-emerald-500/30 text-xs text-emerald-300 flex items-center gap-2">
                 <span className="font-bold text-emerald-400">✓</span>
-                <span>Survives tested stress scenarios across 165 shock combinations with no projected cash shortfall.</span>
+                <span>
+                  Survives {combos_tested == null ? 'every tested' : `all ${combos_tested}`} shock
+                  combination with no projected cash shortfall.
+                </span>
               </div>
             )}
           </div>

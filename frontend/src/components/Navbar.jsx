@@ -7,6 +7,9 @@ export default function Navbar({
   const isGuest = !session || session.mode === 'guest'
   const isDemo = session?.mode === 'authenticated_demo'
   const customer = session?.customer
+  // The verifier's own verdict drives the colour. A green dot over a failed
+  // audit is worse than no dot at all.
+  const auditFailed = customer?.verifier?.status === 'fail'
 
   return (
     <header className="border-b border-slate-800/80 bg-[#0c121e]/80 backdrop-blur-md sticky top-0 z-50">
@@ -38,12 +41,16 @@ export default function Navbar({
           <div className="hidden md:flex items-center gap-3 text-xs">
             <div className="flex items-center gap-2 rounded-lg bg-slate-900/80 px-3 py-1.5 border border-slate-800 text-slate-300">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  auditFailed ? 'bg-rose-400' : 'bg-emerald-400'
+                }`}></span>
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                  auditFailed ? 'bg-rose-500' : 'bg-emerald-500'
+                }`}></span>
               </span>
               <span className="text-slate-400">Auditor:</span>
-              <span className="font-medium text-emerald-400 capitalize">
-                {customer?.verifier?.status || 'Verified'}
+              <span className={`font-medium capitalize ${auditFailed ? 'text-rose-400' : 'text-emerald-400'}`}>
+                {customer?.verifier?.status ?? '—'}
               </span>
             </div>
 
@@ -51,7 +58,11 @@ export default function Navbar({
               <svg className="h-3.5 w-3.5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
               </svg>
-              <span>{customer?.meta?.n_simulations ? customer.meta.n_simulations.toLocaleString('en-IN') : '10,000'} Monte Carlo Runs</span>
+              <span>
+                {customer?.meta?.n_simulations == null
+                  ? 'Monte Carlo engine'
+                  : `${customer.meta.n_simulations.toLocaleString('en-IN')} Monte Carlo Runs`}
+              </span>
             </div>
 
             {/* Customer Session Badge - ONLY displayed when session exists */}
@@ -59,7 +70,7 @@ export default function Navbar({
               isDemo ? (
                 <div className="rounded-lg bg-amber-500/10 px-2.5 py-1.5 border border-amber-500/25 text-amber-300 font-mono text-[11px] flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                  <span>Demo Mode &middot; {customer.customer_id || 'C001'}</span>
+                  <span>Demo Mode &middot; {customer.customer_id ?? '—'}</span>
                 </div>
               ) : (
                 <div className="rounded-lg bg-slate-900/80 px-2.5 py-1.5 border border-slate-800 text-slate-400 font-mono text-[11px]">
