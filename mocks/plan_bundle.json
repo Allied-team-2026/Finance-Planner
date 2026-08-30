@@ -91,7 +91,8 @@
         }
       ],
       "breaking_probability": 0.0036,
-      "shortfall_if_hit": 5000
+      "shortfall_if_hit": 5000,
+      "combos_tested": 165
     },
     {
       "plan_id": "B",
@@ -130,7 +131,8 @@
         }
       ],
       "breaking_probability": 0.03,
-      "shortfall_if_hit": 180000
+      "shortfall_if_hit": 180000,
+      "combos_tested": 165
     },
     {
       "plan_id": "C",
@@ -156,7 +158,8 @@
       "survives_stress": true,
       "breaking_combo": null,
       "breaking_probability": null,
-      "shortfall_if_hit": null
+      "shortfall_if_hit": null,
+      "combos_tested": 165
     }
   ],
   "comparisons": {

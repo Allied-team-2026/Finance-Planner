@@ -329,6 +329,37 @@ def make_plan(customer_id, extra_monthly_savings=0):
                           s["cohort"], s["verify"])
 
 
+def run_challenge_with_retries(s, chosen_plan_id, max_attempts=3):
+    """The challenge, retried on its own refusals, then templated if it must be.
+
+    The challenge agent refuses its own output when a number is not in the bundle
+    or a privacy rule is broken, and that refusal is a ValueError. With one attempt
+    and no fallback it reached the API as a 500 and the challenge panel simply
+    stayed empty - which is what "challenge does nothing for plan A" was. The
+    explanation stage has had a retry and a template fallback all along; this
+    gives the challenge the same two.
+
+    A mock ignores its arguments, so retrying it would return the same canned
+    answer three times. Mocked stages get one attempt and the guards in
+    make_challenge still catch them.
+    """
+    if "challenge" not in REAL_ENGINES:
+        return run("challenge", s["bundle"], s["explanation"], s["verify"],
+                   chosen_plan_id)
+
+    from agents.challenger import challenge as challenge_agent, fallback_challenge
+
+    failures = None
+    for _ in range(max_attempts):
+        try:
+            return challenge_agent(s["bundle"], s["explanation"], s["verify"],
+                                   chosen_plan_id, failures)
+        except (groq.GroqError, ValueError) as e:
+            failures = [str(e)]
+
+    return fallback_challenge(s["bundle"], chosen_plan_id)
+
+
 def make_challenge(customer_id, chosen_plan_id):
     """Runs only after the customer picks a plan."""
     s = run_stages(customer_id)
@@ -337,7 +368,7 @@ def make_challenge(customer_id, chosen_plan_id):
     if not any(p["plan_id"] == chosen_plan_id for p in s["plans"]["plans"]):
         raise ValueError(f"Invalid chosen_plan_id: {chosen_plan_id}")
         
-    challenge = run("challenge", s["bundle"], s["explanation"], s["verify"], chosen_plan_id)
+    challenge = run_challenge_with_retries(s, chosen_plan_id)
 
     # A mock ignores its arguments, so a challenge stage running on its mock hands
     # back the same canned plan every time - the caller asks about B and gets an
@@ -369,6 +400,23 @@ def make_challenge(customer_id, chosen_plan_id):
                 f"restart the server."
             )
 
+    # The screen shows one Auditor badge, driven by `verifier.status`. Until now
+    # that badge reported on the explanation only, so it read "Pass" beside a
+    # challenge nobody had checked. Folding the challenge result into the same
+    # four fields keeps the badge's meaning - everything on this page was checked
+    # - without the UI having to learn about a second verdict.
+    #
+    # Called directly rather than through run(): a stage exists so a mock can
+    # stand in for an engine that is not written yet, and this engine is written.
+    from agents.verifier import verify_challenge
+    cv = verify_challenge(challenge, s["bundle"])
+    combined = {
+        "status": "fail" if "fail" in (s["verify"]["status"], cv["status"]) else "pass",
+        "numbers_checked": s["verify"]["numbers_checked"] + cv["numbers_checked"],
+        "unverified_numbers": s["verify"]["unverified_numbers"] + cv["unverified_numbers"],
+        "suitability_flags": s["verify"]["suitability_flags"] + cv["suitability_flags"],
+    }
+
     return build_response(s["customer"], s["profile"], s["risk"], s["plans"],
                           s["montecarlo"], s["stress"], s["explanation"],
-                          s["cohort"], s["verify"], challenge=challenge)
+                          s["cohort"], combined, challenge=challenge)

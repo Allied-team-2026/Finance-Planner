@@ -198,5 +198,55 @@ def verify(explanation, bundle):
     result["numbers_checked"] = checked
     result["unverified_numbers"] = list(set(unverified)) if unverified else []
     result["suitability_flags"] = flags
-    
+
     return result
+
+
+def verify_challenge(challenge, bundle):
+    """Section 10's numbers, held to the same rule as section 9's.
+
+    Separate from verify() because the challenge does not exist yet when the
+    explanation is checked - it is written only after the customer picks a plan.
+    So the Auditor badge on screen was reporting on the explanation alone, and
+    said "Pass" while the challenge panel showed another customer's money.
+
+    Unlike the plans_text sweep this checks against every plan's numbers rather
+    than only the chosen plan's. Arguing "the Steady plan asks for 35,000" is the
+    challenger doing its job, not cross-plan contamination.
+    """
+    if not isinstance(challenge, dict):
+        return {"status": "fail", "numbers_checked": 0, "unverified_numbers": [],
+                "suitability_flags": ["Challenge is not a JSON object"]}
+
+    checked = 0
+    unverified = []
+    flags = []
+
+    global_wl, comp_wl, plan_wls = build_whitelists(bundle)
+    all_wl = set(global_wl) | set(comp_wl)
+    for wl in plan_wls.values():
+        all_wl.update(wl)
+
+    for n in challenge.get("numbers_used", []):
+        checked += 1
+        if validate_prose_numbers(str(n), all_wl, raise_on_fail=False):
+            unverified.append(f"Declared number {n} not found in bundle")
+
+    for text in [challenge.get("challenge", "")] + list(challenge.get("evidence_cited", [])):
+        for match, val, err in validate_prose_numbers(text, all_wl, raise_on_fail=False):
+            unverified.append(f"Prose number {match} not found in bundle")
+        for _ in extract_decimals(text):
+            checked += 1
+
+    blob = json.dumps(challenge, ensure_ascii=False)
+    for pattern, why in FORBIDDEN_CLAIMS:
+        for m in re.finditer(pattern, blob, re.IGNORECASE):
+            flags.append(f"Forbidden claim: {why} ({m.group(0)})")
+
+    return {
+        "status": "fail" if (unverified or flags) else "pass",
+        "numbers_checked": checked,
+        "unverified_numbers": sorted(set(unverified)),
+        "suitability_flags": flags,
+    }
+
