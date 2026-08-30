@@ -87,7 +87,7 @@ INSTRUCTIONS:
 3. Treat `evidence_cited` as evidence references that must be traceable to the authoritative bundle data. 
 4. Clearly distinguish between fact (from the bundle) and interpretation (your challenge).
 5. Never identify the customer, account numbers, transactions, or individual peers. Do not reveal ground_truth_risk.
-6. Use ONLY numbers present in the payload. Do not invent arbitrary numbers.
+6. Use ONLY numbers present in the payload. Do not invent arbitrary numbers. Numbers must come from the engine sections - context, profile, risk, goals, plans, comparisons, n_simulations, peer_cohort. The "explanation" and "verification" blocks are there so you can question them, not to quote numbers from: a number that appears only in the explanation's prose will be rejected.
 7. "alternative_suggested" must be exactly one plan id from {plan_ids}, or "none" if no other plan is better. No sentence, no explanation, no "Plan A" - just the letter.
 8. Write every number with the same digits the payload uses. Never convert a number into lakh, crore, million or thousand, and never write it as a decimal multiple: 1350000 stays 1350000 and must not become "1.35 million" or "13.5 lakh". Converting units is arithmetic, and a converted number will be rejected.
 
@@ -177,7 +177,19 @@ Output valid JSON matching the exact schema provided.
             raise ValueError(f"Privacy violation: '{term}' found in output")
             
     # 4. Numeric Validation
-    numbers_map = extract_numbers_with_paths(payload)
+    #
+    # The whitelist is the engines' numbers only. `payload` also carries the
+    # explanation and the verification result, and extracting numbers from those
+    # two lets a number launder itself into the challenge: the explanation's prose
+    # said "a 40/60 equity-debt split", so 40 became legal here, and
+    # verification.unverified_numbers made every number the verifier had just
+    # refused legal too. The prompt says the explanation is not authoritative, so
+    # its prose cannot be a source of truth for numbers either. verify_challenge
+    # checks against the bundle alone, so anything allowed here and refused there
+    # put a Fail badge beside a challenge that had already been shown.
+    authoritative = {k: v for k, v in payload.items()
+                     if k not in ("explanation", "verification")}
+    numbers_map = extract_numbers_with_paths(authoritative)
     
     # Verify explicitly declared numbers
     for num in result["numbers_used"]:
