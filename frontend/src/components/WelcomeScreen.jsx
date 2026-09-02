@@ -1,8 +1,8 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
+import { DEMO_CREDENTIALS, validateCredentials } from '../data/demoCredentials'
 
-export default function WelcomeScreen({ onNewUser, onExistingUser, onEnterDemoMode }) {
+export default function WelcomeScreen({ onSignInSuccess, onNewUser }) {
   const [showSignInModal, setShowSignInModal] = useState(false)
-  const [customerNameInput, setCustomerNameInput] = useState('')
   const [customerIdInput, setCustomerIdInput] = useState('')
   const [passwordInput, setPasswordInput] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -11,15 +11,31 @@ export default function WelcomeScreen({ onNewUser, onExistingUser, onEnterDemoMo
 
   const handleSignInSubmit = (e) => {
     e.preventDefault()
-    if (!customerIdInput.trim()) {
-      setSignInError('Please enter a Customer ID to continue.')
+    const result = validateCredentials(customerIdInput, passwordInput)
+    if (!result.isValid) {
+      setSignInError(result.error)
       return
     }
     setSignInError(null)
     setShowSignInModal(false)
-    // Only the id is sent. The backend owns the name, so the typed name is not
-    // passed on: if it were, the sign-in screen and the plan would disagree.
-    onExistingUser(customerIdInput.trim())
+    const authedId = result.customer.customerId
+    if (onSignInSuccess) {
+      onSignInSuccess(authedId)
+    } else if (onNewUser) {
+      onNewUser(authedId)
+    }
+  }
+
+  const handleQuickFill = (id) => {
+    setCustomerIdInput(id)
+    setPasswordInput('demoPassword123')
+    setSignInError(null)
+  }
+
+  const handleCloseModal = () => {
+    setShowSignInModal(false)
+    setSignInError(null)
+    setShowForgotMessage(false)
   }
 
   return (
@@ -82,15 +98,17 @@ export default function WelcomeScreen({ onNewUser, onExistingUser, onEnterDemoMo
           </div>
         </div>
 
-        {/* Primary Action Buttons: New User vs Existing User */}
+        {/* Primary Action Button: Sign In (renamed from Get Started) */}
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md">
-          {/* New User / Get Started */}
           <button
             type="button"
-            onClick={onNewUser}
+            onClick={() => {
+              setSignInError(null)
+              setShowSignInModal(true)
+            }}
             className="w-full sm:w-1/2 py-3.5 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm font-bold text-white shadow-lg shadow-indigo-600/30 transition duration-200 flex items-center justify-center gap-2 cursor-pointer group"
           >
-            <span>Get Started</span>
+            <span>Sign In</span>
             <svg
               className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
               viewBox="0 0 24 24"
@@ -101,54 +119,14 @@ export default function WelcomeScreen({ onNewUser, onExistingUser, onEnterDemoMo
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </button>
-
-          {/* Existing User / Sign In */}
-          <button
-            type="button"
-            onClick={() => setShowSignInModal(true)}
-            className="w-full sm:w-1/2 py-3.5 px-6 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-sm font-semibold text-slate-200 border border-slate-800 hover:border-slate-700 transition duration-200 cursor-pointer"
-          >
-            Sign In
-          </button>
-        </div>
-
-        {/* Distinct Development / Demo Mode Section (Visually & Semantically Separated) */}
-        <div className="mt-12 w-full max-w-xl rounded-2xl border border-slate-800/80 bg-[#090e1a]/80 p-4 sm:p-5 text-left backdrop-blur-md">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="rounded bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 border border-amber-500/20">
-                  Demo / Presentation
-                </span>
-                <span className="text-xs font-semibold text-slate-300">
-                  Hackathon Evaluation Access
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 mt-1">
-                Explore the engine with pre-computed reference data (<strong className="text-slate-300">DEMO MODE &middot; C001</strong>).
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={onEnterDemoMode}
-              className="shrink-0 rounded-xl bg-slate-800 hover:bg-slate-750 text-amber-300 hover:text-amber-200 border border-amber-500/30 px-3.5 py-2 text-xs font-semibold transition cursor-pointer"
-            >
-              Enter Demo Mode &rarr;
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* Sign In Modal (Authentication-Ready UI for Existing Customers) */}
+      {/* Sign In Modal (Clean Professional Fintech-style) */}
       {showSignInModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-fadeIn"
-          onClick={() => {
-            setShowSignInModal(false)
-            setSignInError(null)
-            setShowForgotMessage(false)
-          }}
+          onClick={handleCloseModal}
         >
           <div
             className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#0d1322] p-6 shadow-2xl space-y-4"
@@ -158,38 +136,40 @@ export default function WelcomeScreen({ onNewUser, onExistingUser, onEnterDemoMo
             <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
               <div>
                 <h3 className="text-base font-bold text-white">Sign In to Your Workspace</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Enter your account credentials to resume financial planning</p>
+                <p className="text-xs text-slate-400 mt-0.5">Enter your account credentials to access financial planning</p>
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setShowSignInModal(false)
-                  setSignInError(null)
-                  setShowForgotMessage(false)
-                }}
+                onClick={handleCloseModal}
                 className="rounded-lg p-1 text-slate-400 hover:text-white hover:bg-slate-800/80 text-sm transition cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
+            {/* Demo Accounts Quick-Select Badge */}
+            <div className="rounded-xl bg-slate-950/70 border border-slate-800/80 p-3 text-xs space-y-2">
+              <div className="flex items-center justify-between text-[11px] text-slate-400">
+                <span className="font-semibold text-slate-300">Demo Accounts Available:</span>
+                <span className="font-mono text-slate-400">Password: <code className="text-indigo-400 font-bold">demoPassword123</code></span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {Object.values(DEMO_CREDENTIALS).map((item) => (
+                  <button
+                    key={item.customerId}
+                    type="button"
+                    onClick={() => handleQuickFill(item.customerId)}
+                    className="p-1.5 rounded-lg border border-slate-800 hover:border-indigo-500/50 bg-slate-900/80 hover:bg-indigo-950/30 text-left transition cursor-pointer"
+                  >
+                    <div className="font-mono font-bold text-[11px] text-indigo-400">{item.customerId}</div>
+                    <div className="text-[10px] text-slate-300 truncate">{item.customerName}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Sign-In Form */}
             <form onSubmit={handleSignInSubmit} className="space-y-3.5 text-xs">
-              {/* Customer Name */}
-              <div>
-                <label htmlFor="customer-name" className="block font-semibold text-slate-300 mb-1">
-                  Customer Name
-                </label>
-                <input
-                  id="customer-name"
-                  type="text"
-                  value={customerNameInput}
-                  onChange={(e) => setCustomerNameInput(e.target.value)}
-                  placeholder="Enter your name"
-                  className="w-full rounded-xl bg-slate-950 border border-slate-800 px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                />
-              </div>
-
               {/* Customer ID */}
               <div>
                 <label htmlFor="customer-id" className="block font-semibold text-slate-300 mb-1">
@@ -200,8 +180,8 @@ export default function WelcomeScreen({ onNewUser, onExistingUser, onEnterDemoMo
                   type="text"
                   value={customerIdInput}
                   onChange={(e) => setCustomerIdInput(e.target.value)}
-                  placeholder="Enter customer ID (e.g. C001, C002)"
-                  className="w-full rounded-xl bg-slate-950 border border-slate-800 px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+                  placeholder="Enter customer ID (e.g. C001, C002, C003)"
+                  className="w-full rounded-xl bg-slate-950 border border-slate-800 px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-mono uppercase"
                   required
                 />
               </div>
@@ -210,7 +190,7 @@ export default function WelcomeScreen({ onNewUser, onExistingUser, onEnterDemoMo
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label htmlFor="customer-password" className="font-semibold text-slate-300">
-                    Password
+                    Password <span className="text-rose-400">*</span>
                   </label>
                   <button
                     type="button"
@@ -228,6 +208,7 @@ export default function WelcomeScreen({ onNewUser, onExistingUser, onEnterDemoMo
                     onChange={(e) => setPasswordInput(e.target.value)}
                     placeholder="Enter password"
                     className="w-full rounded-xl bg-slate-950 border border-slate-800 px-3.5 py-2.5 pr-10 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-mono"
+                    required
                   />
                   <button
                     type="button"
@@ -253,30 +234,27 @@ export default function WelcomeScreen({ onNewUser, onExistingUser, onEnterDemoMo
               {/* Forgot Password Message */}
               {showForgotMessage && (
                 <div className="rounded-xl bg-slate-950/80 p-2.5 border border-slate-800 text-[11px] text-slate-300">
-                  Password reset is managed through your wealth advisor or organization administrator in this development environment.
+                  Demo password for all 3 demo accounts (C001, C002, C003) is <strong className="text-indigo-400 font-mono">demoPassword123</strong>.
                 </div>
               )}
 
-              {/* Validation Error */}
+              {/* Validation Error Banner */}
               {signInError && (
-                <p className="text-xs text-rose-400 font-medium">{signInError}</p>
+                <div className="rounded-xl bg-rose-500/10 p-3 border border-rose-500/25 flex items-start gap-2.5 text-xs text-rose-300">
+                  <svg className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  <span>{signInError}</span>
+                </div>
               )}
-
-              {/* Notice regarding backend auth readiness */}
-              <div className="rounded-xl bg-slate-950/60 p-3 border border-slate-800/80 text-[11px] text-slate-400 leading-relaxed">
-                <span className="font-semibold text-slate-300">Authentication Ready: </span>
-                Production credential validation will connect to the backend authentication service. Entering a customer ID loads that profile&apos;s workspace.
-              </div>
 
               {/* Form Action Buttons */}
               <div className="flex items-center gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowSignInModal(false)
-                    setSignInError(null)
-                    setShowForgotMessage(false)
-                  }}
+                  onClick={handleCloseModal}
                   className="w-1/2 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 border border-slate-800 cursor-pointer"
                 >
                   Cancel
@@ -289,32 +267,6 @@ export default function WelcomeScreen({ onNewUser, onExistingUser, onEnterDemoMo
                 </button>
               </div>
             </form>
-
-            {/* Separator to Demo Mode */}
-            <div className="relative flex items-center justify-center my-2">
-              <div className="border-t border-slate-800 w-full" />
-              <span className="bg-[#0d1322] px-2 text-[10px] uppercase font-bold text-slate-500">
-                or
-              </span>
-            </div>
-
-            {/* Quick Demo Access Inside Modal */}
-            <div className="rounded-xl bg-amber-500/5 p-3 border border-amber-500/20 flex items-center justify-between gap-3 text-xs">
-              <div>
-                <p className="font-bold text-amber-300 text-xs">Demo / Presentation</p>
-                <p className="text-[11px] text-slate-400">Load Persona C001 mock analysis</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowSignInModal(false)
-                  onEnterDemoMode()
-                }}
-                className="rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 px-3 py-1.5 text-xs font-semibold transition cursor-pointer"
-              >
-                Enter Demo Mode
-              </button>
-            </div>
           </div>
         </div>
       )}

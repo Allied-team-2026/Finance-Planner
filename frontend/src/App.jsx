@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import defaultData from './data/api_response.json'
 import { fetchPlan } from './services/api'
 import Navbar from './components/Navbar'
 import WelcomeScreen from './components/WelcomeScreen'
+import PipelineLoading from './components/PipelineLoading'
 import UserDashboard from './components/UserDashboard'
 import OnboardingFlow from './components/OnboardingFlow'
 import CustomerSnapshot from './components/CustomerSnapshot'
@@ -16,30 +16,59 @@ import SimulationDeepDive from './components/SimulationDeepDive'
 import VerificationBanner from './components/VerificationBanner'
 
 function App() {
-  // Session State Model: mode ('guest' | 'new_user' | 'authenticated_demo'), customer (null | planData)
+  // Session State Model: mode ('guest' | 'authenticated'), customer (null | planData), customerId (null | string)
   const [session, setSession] = useState({
     mode: 'guest',
     customer: null,
+    customerId: null,
   })
 
-  // Navigation View State: 'welcome' | 'user-dashboard' | 'onboarding' | 'dashboard'
+  // Navigation View State: 'welcome' | 'orchestrating' | 'user-dashboard' | 'onboarding' | 'dashboard'
   const [viewMode, setViewMode] = useState('welcome')
 
   // Centralized selected plan state shared across dashboard components
   const [selectedPlanId, setSelectedPlanId] = useState('A')
 
-  // Flow 1: New User launches Onboarding
-  const handleStartNewUser = () => {
-    setSession({ mode: 'new_user', customer: null })
+  // Flow 1: Sign In Success -> Launch WealthIQ Orchestration Pipeline
+  const handleSignInSuccess = (customerId) => {
+    setSession({ mode: 'authenticated', customer: null, customerId })
+    setViewMode('orchestrating')
+  }
+
+  // Flow 1b: Start new analysis from dashboard or flow
+  const handleStartNewUser = (customerId) => {
+    const activeId = customerId || session.customerId || 'C001'
+    setSession({ mode: 'authenticated', customer: null, customerId: activeId })
+    setViewMode('orchestrating')
+  }
+
+  // Flow 1c: Pipeline completes verification -> transition automatically to Customer Profile Review
+  const handlePipelineComplete = (planData) => {
+    setSession({
+      mode: 'authenticated',
+      customer: planData,
+      customerId: planData.customer_id || session.customerId,
+    })
+    setSelectedPlanId('A')
     setViewMode('onboarding')
   }
 
-  // Flow 2: New User completes Onboarding & Goal Builder
+  // Flow 2: User completes Profile Review & Goal Confirmation -> Launch Planner Dashboard
   const handleOnboardingComplete = async (payload) => {
+    if (session.customer && session.customer.customer_id === (payload?.customer_id || session.customerId)) {
+      setSelectedPlanId('A')
+      setViewMode('dashboard')
+      return
+    }
+
     try {
       const response = await fetchPlan(payload)
       if (response) {
-        setSession({ mode: 'new_user', customer: response })
+        setSession({
+          mode: 'authenticated',
+          customer: response,
+          customerId: payload.customer_id || session.customerId,
+        })
         setSelectedPlanId('A')
         setViewMode('dashboard')
       }
@@ -48,32 +77,9 @@ function App() {
     }
   }
 
-  // Flow 3: Existing User Sign-In
-  const handleExistingUser = async (customerId) => {
-    try {
-      const response = await fetchPlan({ customer_id: customerId })
-      if (response) {
-        // The backend owns the name. We do not overwrite it with whatever was
-        // typed on the sign-in screen, or the two screens disagree.
-        setSession({ mode: 'new_user', customer: response })
-        setSelectedPlanId('A')
-        setViewMode('user-dashboard')
-      }
-    } catch (err) {
-      alert(err.message || 'Connection error: Unable to reach the backend.')
-    }
-  }
-
-  // Flow 4: Development / Hackathon Demo Mode
-  const handleEnterDemoMode = () => {
-    setSession({ mode: 'authenticated_demo', customer: defaultData })
-    setSelectedPlanId('A')
-    setViewMode('dashboard')
-  }
-
   // Session Reset: Clears customer data and returns to Welcome
   const handleResetSession = () => {
-    setSession({ mode: 'guest', customer: null })
+    setSession({ mode: 'guest', customer: null, customerId: null })
     setSelectedPlanId('A')
     setViewMode('welcome')
   }
@@ -82,7 +88,7 @@ function App() {
 
   // Derived effective view guarding against unauthorized guest access to dashboard
   const isGuest = session.mode === 'guest'
-  const effectiveView = isGuest && viewMode !== 'onboarding' ? 'welcome' : viewMode
+  const effectiveView = isGuest && viewMode !== 'onboarding' && viewMode !== 'orchestrating' ? 'welcome' : viewMode
 
   return (
     <div className="min-h-screen bg-[#080C14] text-slate-100 flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
@@ -98,17 +104,31 @@ function App() {
       {effectiveView === 'welcome' && (
         <main className="flex-1">
           <WelcomeScreen
-            onNewUser={handleStartNewUser}
-            onExistingUser={handleExistingUser}
-            onEnterDemoMode={handleEnterDemoMode}
+            onSignInSuccess={handleSignInSuccess}
+            onNewUser={handleSignInSuccess}
           />
         </main>
       )}
 
-      {/* VIEW 2: New User Multi-Step Onboarding & Goal Builder (Starts EMPTY) */}
+      {/* VIEW 2: WealthIQ Orchestration / Engine Pipeline Visualization */}
+      {effectiveView === 'orchestrating' && (
+        <main className="flex-1 overflow-hidden">
+          <PipelineLoading
+            customerId={session.customerId || 'C001'}
+            onComplete={handlePipelineComplete}
+            onCancel={handleResetSession}
+          />
+        </main>
+      )}
+
+      {/* VIEW 3: Customer Profile & Parameter Review */}
       {effectiveView === 'onboarding' && (
         <main className="flex-1 py-8">
           <OnboardingFlow
+            key={session.customerId || 'default'}
+            customerId={session.customerId || 'C001'}
+            initialCustomerId={session.customerId || 'C001'}
+            preloadedData={session.customer}
             onComplete={handleOnboardingComplete}
             onCancel={handleResetSession}
           />
